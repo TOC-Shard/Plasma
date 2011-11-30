@@ -511,6 +511,25 @@ public:
     //             : more specific in future version
     //
     static bool ExitPBMode();
+
+    /////////////////////////////////////////////////////////////////////////////
+    //
+    //  Function   : EnterAnimMode
+    //  PARAMETERS : animName - string
+    //
+    //  PURPOSE    : Makes the avatar enter a custom anim loop.
+    //
+    static void EnterAnimMode(const char* animName);
+
+    /////////////////////////////////////////////////////////////////////////////
+    //
+    //  Function   : ExitAnimMode
+    //  PARAMETERS : animName - string
+    //
+    //  PURPOSE    : Makes the avatar stop the custom anim loop.
+    //               May cause problems if EnterAnimMode() was not called earlier.
+    //
+    static void ExitAnimMode(const char* animName);
     
     /////////////////////////////////////////////////////////////////////////////
     //

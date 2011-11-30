@@ -67,6 +67,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "plAvatar/plArmatureMod.h"
 #include "plAvatar/plAvBrainHuman.h"        // needed to call the emote
 #include "plAvatar/plAGAnim.h"          // to get the BodyUsage enum
+#include "plAvatar/plAvatarTasks.h"
 #include "plInputCore/plAvatarInputInterface.h"
 #include "plPhysical.h"
 #include "plMessage/plSimStateMsg.h"
@@ -1753,6 +1754,52 @@ bool cyAvatar::EnterPBMode()
 bool cyAvatar::ExitPBMode()
 {
     return IExitTopmostGenericMode();
+}
+
+/////////////////////////////////////////////////////////////////////////////
+//
+//  Function   : EnterAnimMode
+//  PARAMETERS : animName - string
+//
+//  PURPOSE    : Makes the avatar enter a custom anim loop.
+//
+void cyAvatar::EnterAnimMode(const char* animName)
+{
+    plArmatureMod *fAvMod = plAvatarMgr::GetInstance()->GetLocalAvatar();
+
+    // check that we aren't adding this twice...
+    if (!fAvMod->FindAnimInstance(animName))
+    {
+        plKey avKey = fAvMod->GetKey();
+        plAvAnimTask *animTask = new plAvAnimTask(animName, 0.0, 1.0, 1.0, 0.0, true, true, true);
+        if (animTask)
+        {
+            plAvTaskMsg *taskMsg = new plAvTaskMsg(avKey, avKey, animTask);
+            taskMsg->SetBCastFlag(plMessage::kNetPropagate);
+            taskMsg->Send();
+        }
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+//
+//  Function   : ExitAnimMode
+//  PARAMETERS : animName - string
+//
+//  PURPOSE    : Makes the avatar stop the custom anim loop.
+//               May cause problems if EnterAnimMode() was not called earlier.
+//
+void cyAvatar::ExitAnimMode(const char* animName)
+{
+    plArmatureMod *fAvMod = plAvatarMgr::GetInstance()->GetLocalAvatar();
+    plKey avKey = fAvMod->GetKey();
+    plAvAnimTask *animTask = new plAvAnimTask(animName, -1.0);
+    if (animTask)
+    {
+        plAvTaskMsg *taskMsg = new plAvTaskMsg(avKey, avKey, animTask);
+        taskMsg->SetBCastFlag(plMessage::kNetPropagate);
+        taskMsg->Send();
+    }
 }
 
 
