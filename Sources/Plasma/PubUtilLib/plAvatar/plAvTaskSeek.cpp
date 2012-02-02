@@ -113,6 +113,7 @@ void plAvTaskSeek::IInitDefaults()
     fFlags = kSeekFlagForce3rdPersonOnStart;  
     fState = kSeekRunNormal;
     fNotifyFinishedKey = nil;
+    fFinishMsg = nil;
 }
 // plAvTaskSeek ------------
 // -------------
@@ -156,6 +157,7 @@ plAvTaskSeek::plAvTaskSeek(plAvSeekMsg *msg)
         fFlags &= ~kSeekFlagRotationOnly;
 
     fNotifyFinishedKey = msg->fFinishKey;
+    fFinishMsg = msg->fFinishMsg;
 }
 
 // plAvTaskSeek ------------------------
@@ -199,6 +201,11 @@ void plAvTaskSeek::SetTarget(hsPoint3 &pos, hsPoint3 &lookAt)
     hsVector3 up(0.f, 0.f, 1.f);
     float angle = atan2(lookAt.fY - pos.fY, lookAt.fX - pos.fX) + M_PI / 2;
     fSeekRot.SetAngleAxis(angle, up);
+}
+
+void plAvTaskSeek::SetFinishMsg(plMessage *msg)
+{
+    fFinishMsg = msg;
 }
 
 // Start -----------------------------------------------------------------------------------------
@@ -301,6 +308,9 @@ void plAvTaskSeek::Finish(plArmatureMod *avatar, plArmatureBrain *brain, double 
     //inform controller we are done seeking
     if (avatar->GetController())
         avatar->GetController()->SetSeek(false);
+
+    if(fFinishMsg)
+        fFinishMsg->Send();
 }
 
 void plAvTaskSeek::LeaveAge(plArmatureMod *avatar)
