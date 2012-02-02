@@ -108,6 +108,7 @@ public:
     // oneShot Avatar 
     virtual void RunBehavior(pyKey &behKey, hsBool netForce, hsBool netProp);
     virtual void RunBehaviorAndReply(pyKey& behKey, pyKey& replyKey, hsBool netForce, hsBool netProp);
+    virtual void RunCoopAnim(pyKey &targetKey, const char* activeAvatarAnim, const char* targetAvatarAnim, float dist, bool move);
 
     // for the multistage behaviors
     virtual void NextStage(pyKey &behKey, float transTime, hsBool setTime, float newTime,
