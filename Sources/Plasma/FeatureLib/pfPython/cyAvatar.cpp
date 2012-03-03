@@ -374,7 +374,7 @@ void cyAvatar::RunBehaviorAndReply(pyKey& behKey, pyKey& replyKey, hsBool netFor
 //
 //  PURPOSE    : Seek near another avatar and run animations on both
 //
-void cyAvatar::RunCoopAnim(pyKey &targetKey, const char* activeAvatarAnim, const char* targetAvatarAnim, float dist, bool move)
+void cyAvatar::RunCoopAnim(pyKey &targetKey, plString &activeAvatarAnim, plString &targetAvatarAnim, float dist, bool move)
 {
     if ( fRecvr.Count() > 0 && fRecvr[0] != nil)
     {
@@ -588,6 +588,7 @@ void cyAvatar::Seek(pyKey &seekKey, float duration, hsBool usePhysics)
     }
 }
 */
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -1814,7 +1815,7 @@ bool cyAvatar::ExitPBMode()
 //
 //  PURPOSE    : Makes the avatar enter a custom anim loop.
 //
-void cyAvatar::EnterAnimMode(const char* animName)
+void cyAvatar::EnterAnimMode(plString &animName)
 {
     plArmatureMod *fAvMod = plAvatarMgr::GetInstance()->GetLocalAvatar();
 
@@ -1840,7 +1841,7 @@ void cyAvatar::EnterAnimMode(const char* animName)
 //  PURPOSE    : Makes the avatar stop the custom anim loop.
 //               May cause problems if EnterAnimMode() was not called earlier.
 //
-void cyAvatar::ExitAnimMode(const char* animName)
+void cyAvatar::ExitAnimMode(plString &animName)
 {
     plArmatureMod *fAvMod = plAvatarMgr::GetInstance()->GetLocalAvatar();
     plKey avKey = fAvMod->GetKey();

@@ -156,7 +156,7 @@ PYTHON_METHOD_DEFINITION(ptAvatar, runCoopAnim, args)
     }
 
     pyKey* key = pyKey::ConvertFrom(keyObj);
-    self->fThis->RunCoopAnim(*key, animAv1, animAv2, dist, move);
+    self->fThis->RunCoopAnim(*key, plString::FromUtf8(animAv1), plString::FromUtf8(animAv2), dist, move);
     PYTHON_RETURN_NONE;
 }
 
@@ -630,7 +630,7 @@ PYTHON_START_METHODS_TABLE(ptAvatar)
     PYTHON_METHOD(ptAvatar, nextStage, "Params: behaviorKey,transitionTime,setTimeFlag,newTime,SetDirectionFlag,isForward,netForce\nTells a multistage behavior to go to the next stage (Why does Matt like so many parameters?)"),
     PYTHON_METHOD(ptAvatar, previousStage, "Params: behaviorKey,transitionTime,setTimeFlag,newTime,SetDirectionFlag,isForward,netForce\nTells a multistage behavior to go to the previous stage"),
     PYTHON_METHOD(ptAvatar, gotoStage, "Params: behaviorKey,stage,transitionTime,setTimeFlag,newTime,SetDirectionFlag,isForward,netForce\nTells a multistage behavior to go to a particular stage"),
-    
+
     PYTHON_METHOD_NOARGS(ptAvatar, getAvatarClothingGroup, "Returns what clothing group the avatar belongs to.\n"
                 "It is also a means to determine if avatar is male or female"),
     PYTHON_METHOD(ptAvatar, getEntireClothingList, "Params: clothing_type\nGets the entire list of clothing available. 'clothing_type' not used\n"
@@ -782,7 +782,7 @@ PYTHON_GLOBAL_METHOD_DEFINITION(PtAvatarEnterAnimMode, args, "Params: animName\n
     }
 
     std::string animStr = animName; // convert to string (for safety)
-    cyAvatar::EnterAnimMode(animStr.c_str());
+    cyAvatar::EnterAnimMode(plString::FromUtf8(animStr.c_str()));
     PYTHON_RETURN_NONE;
 }
 
@@ -796,7 +796,7 @@ PYTHON_GLOBAL_METHOD_DEFINITION(PtAvatarExitAnimMode, args, "Params: animName\nE
     }
 
     std::string animStr = animName; // convert to string (for safety)
-    cyAvatar::ExitAnimMode(animStr.c_str());
+    cyAvatar::ExitAnimMode(plString::FromUtf8(animStr.c_str()));
     PYTHON_RETURN_NONE;
 }
 
