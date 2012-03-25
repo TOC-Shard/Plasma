@@ -3067,8 +3067,6 @@ PF_CONSOLE_CMD( Camera,     // groupName
 //// Logic Mod Group Commands ///////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
 
-#ifndef LIMIT_CONSOLE_COMMANDS
-
 PF_CONSOLE_GROUP( Logic )
 
 static plLogicModBase *FindLogicMod(const plString &name)
@@ -3106,6 +3104,7 @@ PF_CONSOLE_CMD( Logic, TriggerDetector, "string detectorComp", "Triggers the nam
     if (mod)
         mod->ConsoleTrigger(plNetClientMgr::GetInstance()->GetLocalPlayerKey());
 }
+#ifndef LIMIT_CONSOLE_COMMANDS
 
 PF_CONSOLE_CMD(Logic, EnableDetector, "string detectorComp, bool enable", "Enables/disables the named detector component")
 {

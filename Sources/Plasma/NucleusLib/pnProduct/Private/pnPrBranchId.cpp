@@ -59,7 +59,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 
 // This value is manually changed upon each branch so that client applications
 // built from this branch may not connect to servers built from another.
-#define BRANCH_ID 1
+#define BRANCH_ID 2
 COMPILER_ASSERT(BRANCH_ID != 0);
 
 #else

@@ -58,9 +58,9 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 namespace Product {
 
 namespace Uru {
-    static const wchar_t kCoreName[]  = L"UruLive";
-    static const wchar_t kShortName[] = L"UruLive";
-    static const wchar_t kLongName[]  = L"Uru Live";
+    static const wchar_t kCoreName[]  = L"TOCMoul";
+    static const wchar_t kShortName[] = L"TOCMoul";
+    static const wchar_t kLongName[]  = L"The Open Cave";
     static const plUUID  kId("ea489821-6c35-4bd0-9dae-bb17c585e680");
 }
 
