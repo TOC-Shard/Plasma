@@ -705,6 +705,30 @@ PF_CONSOLE_CMD( Avatar_Anim, SetBlend, "string Animation, float blend", "Set the
     }
 }
 
+PF_CONSOLE_CMD( Avatar_Anim, Loop, "string Animation", "Start/Stop a loop of a specific animation.")
+{
+    plString animationName = plString::FromUtf8(params[0]);
+
+    plArmatureMod *fAvMod = plAvatarMgr::GetInstance()->GetLocalAvatar();
+    plKey avKey = fAvMod->GetKey();
+    plAvAnimTask *animTask;
+
+    if (!fAvMod->FindAnimInstance(animationName))
+    {
+        animTask = new plAvAnimTask(animationName, 0.0, 1.0, 1.0, 0.0, true, true, true);
+    }
+    else
+    {
+        animTask = new plAvAnimTask(animationName, -1.0);
+    }
+    if (animTask)
+    {
+        plAvTaskMsg *taskMsg = new plAvTaskMsg(avKey, avKey, animTask);
+        taskMsg->SetBCastFlag(plMessage::kNetPropagate);
+        taskMsg->Send();
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // LOD

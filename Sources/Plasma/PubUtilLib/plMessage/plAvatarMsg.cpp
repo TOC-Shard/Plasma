@@ -242,7 +242,8 @@ plAvSeekMsg::plAvSeekMsg()
   fAlignType(kAlignHandle),
   fAnimName(nil),
   fNoSeek(false),
-  fFlags(kSeekFlagForce3rdPersonOnStart)
+  fFlags(kSeekFlagForce3rdPersonOnStart),
+  fFinishMsg(nil)
 {
 }
 
@@ -261,7 +262,8 @@ plAvSeekMsg::plAvSeekMsg(const plKey& sender, const plKey& receiver,
   fAlignType(alignType),
   fNoSeek(noSeek),
   fFlags(flags),
-  fFinishKey(finishKey)
+  fFinishKey(finishKey),
+  fFinishMsg(nil)
 {
 }
 

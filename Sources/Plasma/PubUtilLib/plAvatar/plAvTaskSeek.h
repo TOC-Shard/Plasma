@@ -79,6 +79,7 @@ public:
 
     void SetTarget(plKey target);
     void SetTarget(hsPoint3 &pos, hsPoint3 &lookAt);
+    void SetFinishMsg(plMessage *msg);
 
     /** Initiate the task; make sure we're running on the right type of brain, save off
         user input state, and turn off any other running behaviors.*/
@@ -156,6 +157,7 @@ protected:
     const char * fAnimName;                 // an (optional) anim to use to line up our target
                                             // so you can say "seek to a place where your hand
                                             // will be here after you play animation foo"
+    plMessage * fFinishMsg;
 
     hsPoint3 fPosition;                     // our current position
     hsQuat fRotation;                       // our current rotation
