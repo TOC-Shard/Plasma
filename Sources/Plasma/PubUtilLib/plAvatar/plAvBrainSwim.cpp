@@ -417,7 +417,7 @@ hsBool plAvBrainSwim::MsgReceive(plMessage *msg)
     {
         const char *thisAge = plAgeLoader::GetInstance()->GetCurrAgeDesc().GetAgeName();
         
-        fIs2D = (thisAge == "Ahnonay");
+        fIs2D = (strcmp(thisAge,"Ahnonay") == 0);
         //fIs2D = swimMsg->GetIs2D();
         if (swimMsg->GetIsLeaving())
             fMode = kAbort;
