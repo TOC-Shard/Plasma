@@ -50,7 +50,8 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 // -------------
 plSwimMsg::plSwimMsg()
 : fIsEntering(false),
-  fSwimRegionKey(nil)
+  fSwimRegionKey(nil),
+  fIs2D(false)
 {
 }
 
@@ -58,11 +59,19 @@ plSwimMsg::plSwimMsg()
 // ------------------------------
 plSwimMsg::plSwimMsg(const plKey &sender, const plKey &receiver, bool entering, plKey regionKey)
 : plMessage(sender, receiver, nil),
-  fIsEntering(entering)
+  fIsEntering(entering),
+  fIs2D(false)
 {
     fSwimRegionKey = regionKey;
 }
 
+plSwimMsg::plSwimMsg(const plKey &sender, const plKey &receiver, bool entering, plKey regionKey, bool is2D)
+: plMessage(sender, receiver, nil),
+  fIsEntering(entering),
+  fIs2D(is2D)
+{
+    fSwimRegionKey = regionKey;
+}
 // GetIsEntering --------------
 // --------------
 bool plSwimMsg::GetIsEntering()
@@ -77,13 +86,18 @@ bool plSwimMsg::GetIsLeaving()
     return !fIsEntering;
 }
 
+bool plSwimMsg::GetIs2D()
+{
+    return fIs2D;
+}
 // Read ---------------------------------------------
 // -----
 void plSwimMsg::Read(hsStream *stream, hsResMgr *mgr)
 {
     plMessage::IMsgRead(stream, mgr);
 
-    fIsEntering = stream->Readbool();
+    fIsEntering = stream->ReadBool();
+    fIs2D = stream->ReadBool();
     fSwimRegionKey = mgr->ReadKey(stream);
 }
 
@@ -93,6 +107,7 @@ void plSwimMsg::Write(hsStream *stream, hsResMgr *mgr)
 {
     plMessage::IMsgWrite(stream, mgr);
 
-    stream->Writebool(fIsEntering);
+    stream->WriteBool(fIsEntering);
+    stream->WriteBool(fIs2D);
     mgr->WriteKey(stream, fSwimRegionKey);
 }

@@ -54,10 +54,12 @@ public:
     // tors
     plSwimMsg();
     plSwimMsg(const plKey &sender, const plKey &receiver, bool entering, plKey regionKey);
+    plSwimMsg(const plKey &sender, const plKey &receiver, bool entering, plKey regionKey, bool is2D);
 
 
     bool GetIsEntering();
     bool GetIsLeaving();
+    bool GetIs2D();
 
     // plasma protocol
     CLASSNAME_REGISTER( plSwimMsg );
@@ -72,6 +74,7 @@ private:
     bool fIsEntering;   // right now, if you're not entering, you're leaving
                         // that might not be so simple later, so we hide it
                         // behind a getter.
+    bool fIs2D;
 };
 
 

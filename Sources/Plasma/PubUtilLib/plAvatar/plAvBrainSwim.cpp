@@ -83,6 +83,8 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "pnMessage/plCameraMsg.h"
 #include "pfMessage/plArmatureEffectMsg.h"
 
+#include "plAgeLoader/plAgeLoader.h"
+
 class plSwimBehavior : public plArmatureBehavior
 {
     friend class plAvBrainSwim;
@@ -196,6 +198,28 @@ public:
     }
 };
 
+class SwimPitch: public plSwimBehavior
+{
+public:
+    virtual void Process(double time, float elapsed)
+    {
+        static const float maxPitchSpeed = 1.0f;
+        static const float timeToMaxPitch = 0.5f;
+        static const float incPerSec = maxPitchSpeed / timeToMaxPitch;
+
+        float oldSpeed = fabs(fSwimBrain->fCallbackAction->GetPitchStrength());
+        float thisInc = elapsed * incPerSec;
+        float newSpeed = min(oldSpeed + thisInc, maxPitchSpeed);
+        fSwimBrain->fCallbackAction->SetPitchStrength(newSpeed * fAvMod->GetKeyPitchStrength());
+    }
+    virtual void IStop()
+    {
+        if (fSwimBrain->fCallbackAction)
+            fSwimBrain->fCallbackAction->SetPitchStrength(0.0f);
+        plSwimBehavior::IStop();
+    }
+};
+
 class SwimTurnLeft : public SwimTurn
 {
 public:
@@ -231,6 +255,42 @@ public:
         return (fAvMod->TurnRightKeyDown() && !fAvMod->ForwardKeyDown() && !fAvMod->BackwardKeyDown());
     }
 };  
+
+class SwimUp : public plSwimBehavior
+{
+public:
+    virtual hsBool PreCondition(double time, float elapsed)
+    {
+        return (fAvMod->UpKeyDown() && !fAvMod->ForwardKeyDown() && !fAvMod->BackwardKeyDown());
+    }
+};
+
+class SwimDown : public plSwimBehavior
+{
+public:
+    virtual hsBool PreCondition(double time, float elapsed)
+    {
+        return (fAvMod->DownKeyDown() && !fAvMod->ForwardKeyDown() && !fAvMod->BackwardKeyDown());
+    }
+};
+
+class SwimPitchUp : public SwimPitch
+{
+public:
+    virtual hsBool PreCondition(double time, float elapsed)
+    {
+        return (fAvMod->GetPitchStrength() > 0 && (fAvMod->ForwardKeyDown() || fAvMod->BackwardKeyDown()));
+    }
+};
+
+class SwimPitchDown : public SwimPitch
+{
+public:
+    virtual hsBool PreCondition(double time, float elapsed)
+    {
+        return (fAvMod->GetPitchStrength() < 0 && (fAvMod->ForwardKeyDown() || fAvMod->BackwardKeyDown()));
+    }
+};
 
 ///////////////////////////////////////////////////////////////////////////////////////////
 
@@ -295,7 +355,7 @@ hsBool plAvBrainSwim::Apply(double time, float elapsed)
     if (fMode == kWading)
     {
         if (fSurfaceDistance > kMinSwimDepth && fSurfaceDistance < 100.0f) 
-            IStartSwimming(true);
+            IStartSwimming(fIs2D);
         else if (fSurfaceDistance < 0.f)
             fMode = kWalking;
     } 
@@ -312,18 +372,12 @@ hsBool plAvBrainSwim::Apply(double time, float elapsed)
         return false;
     else 
     {
-        if (fMode == kSwimming2D) 
-        {
-            IProcessSwimming2D(time, elapsed);
-
-            // The contact check is so that if buoyancy bobs us a little too high, we don't
-            // switch to wading only to fall again.
-//          hsAssert(0, "fixme physx");
-            if (fSurfaceDistance < kMinSwimDepth-.5  && fCallbackAction->HadContacts())
-                IStartWading();
-        } 
-        else if (fMode == kSwimming3D) 
-            IProcessSwimming3D(time, elapsed);
+        IProcessSwimming(time, elapsed);
+        // The contact check is so that if buoyancy bobs us a little too high, we don't
+        // switch to wading only to fall again.
+//      hsAssert(0, "fixme physx");
+        if (fSurfaceDistance < kMinSwimDepth-.5  && fCallbackAction->HadContacts())
+            IStartWading();
     }
     return plArmatureBrain::Apply(time, elapsed);
 }
@@ -361,6 +415,10 @@ hsBool plAvBrainSwim::MsgReceive(plMessage *msg)
     plSwimMsg *swimMsg = plSwimMsg::ConvertNoRef(msg);
     if (swimMsg)
     {
+        const char *thisAge = plAgeLoader::GetInstance()->GetCurrAgeDesc().GetAgeName();
+        
+        fIs2D = (thisAge == "Ahnonay");
+        //fIs2D = swimMsg->GetIs2D();
         if (swimMsg->GetIsLeaving())
             fMode = kAbort;
         
@@ -495,12 +553,13 @@ void plAvBrainSwim::IStartSwimming(bool is2D)
     }   
 }
 
-hsBool plAvBrainSwim::IProcessSwimming2D(double time, float elapsed)
+hsBool plAvBrainSwim::IProcessSwimming(double time, float elapsed)
 {
     int i;
     for (i = 0; i < fBehaviors.GetCount(); i++)
     {
         plSwimBehavior *behavior = (plSwimBehavior*)fBehaviors[i];
+        hsAssert(behavior, "Behavior does not exist.");
         if (behavior->PreCondition(time, elapsed) && !IsRunningTask())
         {
             behavior->SetStrength(1.f, 2.f);
@@ -515,12 +574,6 @@ hsBool plAvBrainSwim::IProcessSwimming2D(double time, float elapsed)
     return true;
 }
 
-hsBool plAvBrainSwim::IProcessSwimming3D(double time, float elapsed)
-{
-    fAvMod->ApplyAnimations(time, elapsed);
-    return true;
-}
-
 hsBool plAvBrainSwim::IInitAnimations()
 {
     plAGAnim *treadWater = fAvMod->FindCustomAnim("SwimIdle");
@@ -531,9 +584,19 @@ hsBool plAvBrainSwim::IInitAnimations()
     plAGAnim *swimRight = fAvMod->FindCustomAnim("SideSwimRight");
     plAGAnim *treadWaterLeft = fAvMod->FindCustomAnim("TreadWaterTurnLeft");
     plAGAnim *treadWaterRight = fAvMod->FindCustomAnim("TreadWaterTurnRight");  
+    plAGAnim *swimUp = fAvMod->FindCustomAnim("SwimUp"); // Not yet created
+    plAGAnim *swimDown = fAvMod->FindCustomAnim("SwimDown"); // Not yet created
 
     static const float defaultFade = 2.0f;
-    fBehaviors.SetCountAndZero(kSwimBehaviorMax);
+    if (fIs2D)
+    {
+        fBehaviors.SetCountAndZero(kSwimBehaviorMax);
+    }
+    else
+    {
+        fBehaviors.SetCountAndZero(kSwimBehaviorMax+kSwim3DBehaviorMax);
+    }
+
     plSwimBehavior *behavior;
     fBehaviors[kTreadWater] = behavior = new TreadWater;
     behavior->Init(treadWater, true, this, fAvMod, kTreadWater);
@@ -565,6 +628,20 @@ hsBool plAvBrainSwim::IInitAnimations()
     fBehaviors[kTreadTurnRight] = behavior = new TreadTurnRight;
     behavior->Init(treadWaterRight, true, this, fAvMod, kTreadTurnRight);
     
+    if (!fIs2D)
+    {
+        fBehaviors[kSwimBehaviorMax+kSwimUp] = behavior = new SwimUp;
+        behavior->Init(swimUp, true, this, fAvMod, kSwimBehaviorMax+kSwimUp);
+
+        fBehaviors[kSwimBehaviorMax+kSwimDown] = behavior = new SwimDown;
+        behavior->Init(swimDown, true, this, fAvMod, kSwimBehaviorMax+kSwimDown);
+
+        fBehaviors[kSwimBehaviorMax+kSwimPitchUp] = behavior = new SwimPitchUp;
+        behavior->Init(nil, true, this, fAvMod, kSwimBehaviorMax+kSwimPitchUp);
+
+        fBehaviors[kSwimBehaviorMax+kSwimPitchDown] = behavior = new SwimPitchDown;
+        behavior->Init(nil, true, this, fAvMod, kSwimBehaviorMax+kSwimPitchDown);
+    }
     return true;
 }
 
@@ -678,11 +755,14 @@ void plAvBrainSwim::DumpToDebugDisplay(int &x, int &y, int lineHeight, char *str
 
 
 //  hsAssert(0, "fixme physx");
-//  float buoy = fCallbackAction? fCallbackAction->GetBuoyancy() : 0.0f;
-//  sprintf(strBuf, "Distance to surface: %f Buoyancy: %f", fSurfaceDistance, buoy);
-//  debugTxt.DrawString(x, y, strBuf);
-//  y += lineHeight;
-// 
+    float buoy = fCallbackAction? fCallbackAction->GetBuoyancy() : 0.0f;
+    sprintf(strBuf, "Distance to surface: %f Buoyancy: %f", fSurfaceDistance, buoy);
+    debugTxt.DrawString(x, y, strBuf);
+    y += lineHeight;
+    bool UpEnabled = fCallbackAction? fCallbackAction->GetUpEnabled() : false;
+    sprintf(strBuf, "Up Enabled: %i", UpEnabled);
+    debugTxt.DrawString(x, y, strBuf);
+    y += lineHeight;
 //  hsVector3 linV;
 //  fAvMod->GetPhysical()->GetLinearVelocitySim(linV);
 //  hsVector3 angV;

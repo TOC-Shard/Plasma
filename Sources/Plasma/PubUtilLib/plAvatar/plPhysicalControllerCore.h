@@ -164,6 +164,7 @@ public:
     }
     void SendCorrectionMessages();
     void IncrementAngle(float deltaAngle);
+    void IncrementAngleSwim(float deltaAngle, float deltaPitch, bool UpEnabled);
     void UpdateWorldRelativePos();
     virtual void SetLinearVelocity(const hsVector3& linearVel){fLinearVelocity=linearVel;}
     //should actually be a 3 vector but everywhere else it is assumed to be just around  Z 
@@ -172,10 +173,18 @@ public:
     {
         fLinearVelocity=linearVel;
         fAngularVelocity=angVel;
+        fPitchVelocity=0.f;
+    }
+    virtual void SetVelocities(const hsVector3& linearVel, float angVel, float pitchVel)
+    {
+        fLinearVelocity=linearVel;
+        fAngularVelocity=angVel;
+        fPitchVelocity=pitchVel;
     }
     
     virtual const hsVector3& GetLinearVelocity()  ;
     virtual float GetAngularVelocity(){return fAngularVelocity;}
+    virtual float GetPitchVelocity(){return fPitchVelocity;}
     virtual const hsVector3& GetAchievedLinearVelocity()const {return fAchievedLinearVelocity;}
     plPhysical* GetPushingPhysical();
     bool GetFacingPushingPhysical();
@@ -221,6 +230,8 @@ protected:
     //physical properties
     hsVector3 fLinearVelocity;
     float fAngularVelocity;
+    float fPitchVelocity;
+    float fOldPitch;
     hsVector3 fAchievedLinearVelocity;
     plPhysical* fPushingPhysical;
     bool fFacingPushingPhysical;
@@ -314,11 +325,13 @@ public:
     virtual void Apply(float delSecs);
     virtual void Update(float delSecs);      
     float GetBuoyancy() { return fBuoyancy; }
+    bool GetUpEnabled() { return fUpEnabled; }
     hsBool IsOnGround() { return fOnGround; }
     hsBool HadContacts() { return fHadContacts; }
     virtual void IAddContactNormals(hsVector3& vec);
 protected:
     virtual hsBool IRequireBehaviourLikeAnAnimatedPhysical(){return true;}
+    bool fUpEnabled;
 private:
     void IAdjustBuoyancy();
     float fBuoyancy;

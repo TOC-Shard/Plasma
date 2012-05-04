@@ -2222,6 +2222,16 @@ bool plArmatureMod::TurnRightKeyDown() const
     return GetInputFlag(B_CONTROL_ROTATE_RIGHT) ? true : false;
 }
 
+bool plArmatureMod::UpKeyDown() const
+{
+    return GetInputFlag(B_CONTROL_MOVE_UP) ? true : false;
+}
+
+bool plArmatureMod::DownKeyDown() const
+{
+    return GetInputFlag(B_CONTROL_MOVE_DOWN) ? true : false;
+}
+
 bool plArmatureMod::JumpKeyDown() const
 {
     return GetInputFlag(B_CONTROL_JUMP) ? true : false;
@@ -2295,7 +2305,21 @@ float plArmatureMod::GetAnalogTurnStrength() const
         return fMouseFrameTurnStrength / elapsed;
     else
         return 0;
-}   
+}
+
+float plArmatureMod::GetPitchStrength() const
+{
+    //return GetKeyPitchStrength() + GetAnalogPitchStrength();
+    return GetKeyPitchStrength();
+}
+
+float plArmatureMod::GetKeyPitchStrength() const
+{
+    if (StrafeKeyDown())
+        return 0.f;
+
+    return (UpKeyDown() ? 1.f : 0.f) + (DownKeyDown() ? -1.f : 0.f);
+}
 
 void plArmatureMod::SetReverseFBOnIdle(bool val)
 {

@@ -51,6 +51,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "plPhysX/plSimulationMgr.h"
 #include "plPhysX/plPXPhysical.h"
 #include "pnMessage/plSetNetGroupIDMsg.h"
+
 #define kSWIMRADIUS 1.1f
 #define kSWIMHEIGHT 2.8f
 #define kGENERICCONTROLLERRADIUS 1.1f
@@ -130,6 +131,7 @@ plPhysicalControllerCore::plPhysicalControllerCore(plKey OwnerSceneObject, float
 ,fWorldKey(nil)
 ,fLinearVelocity(0.f,0.f,0.f)
 ,fAngularVelocity(0.f)
+,fPitchVelocity(0.f)
 ,fAchievedLinearVelocity(0.0f,0.0f,0.0f)
 ,fLocalPosition(0.0f,0.0f,0.0f)
 ,fLocalRotation(0.0f,0.0f,0.0f,1.0f)
@@ -143,6 +145,7 @@ plPhysicalControllerCore::plPhysicalControllerCore(plKey OwnerSceneObject, float
 ,fKinematicEnableNextUpdate(false)
 ,fNeedsResize(false)
 ,fPushingPhysical(nil)
+,fOldPitch(0)
 {
 }
 
@@ -205,6 +208,46 @@ void plPhysicalControllerCore::IncrementAngle(float deltaAngle)
         angle = angle - (2*M_PI);
     // and set the new angle
     fLocalRotation.SetAngleAxis(angle, hsVector3(0,0,1));
+}
+void plPhysicalControllerCore::IncrementAngleSwim(float deltaAngle, float deltaPitch, bool UpEnabled)
+{
+    float q0 = fLocalRotation.fX;
+    float q1 = fLocalRotation.fY;
+    float q2 = fLocalRotation.fZ;
+    float q3 = fLocalRotation.fW;
+
+    float yaw = atan2(2*(q0*q1+q2*q3), 1-2*(q1*q1+q2*q2));
+    float roll = asin(2*(q0*q2-q3*q1));
+    float pitch = atan2(2*(q0*q3+q1*q2), 1-2*(q2*q2+q3*q3));
+
+    pitch += deltaPitch;
+    yaw += deltaAngle;
+    // make sure we wrap around
+    if (pitch < 0)
+        pitch = (2*M_PI) + pitch; // angle is -, so this works like a subtract
+    if (pitch >= (2*M_PI))
+        pitch = pitch - (2*M_PI);
+
+    if (yaw < 0)
+        yaw = (2*M_PI) + yaw;
+    if (yaw >= (2*M_PI))
+        yaw = yaw - (2*M_PI);
+    // we don't want to make a 360° turn, instead we have a maximum
+    // pitch of approximatly +/- 60°
+    if (pitch < 2.1f)
+        pitch = 2.1f;
+    else if (pitch > 4.1f)
+        pitch = 4.1f;
+
+    // we don't want to swim out of the water
+    if ((!UpEnabled) && (pitch > M_PI))
+        pitch = M_PI;
+
+    // set the angle
+    fLocalRotation.fX = cos(yaw/2)*cos(roll/2)*cos(pitch/2)+sin(yaw/2)*sin(roll/2)*sin(pitch/2);
+    fLocalRotation.fY = sin(yaw/2)*cos(roll/2)*cos(pitch/2)-cos(yaw/2)*sin(roll/2)*sin(pitch/2);
+    fLocalRotation.fZ = cos(yaw/2)*sin(roll/2)*cos(pitch/2)+sin(yaw/2)*cos(roll/2)*sin(pitch/2);
+    fLocalRotation.fW = cos(yaw/2)*cos(roll/2)*sin(pitch/2)-sin(yaw/2)*sin(roll/2)*cos(pitch/2);
 }
 
 void plPhysicalControllerCore::UpdateWorldRelativePos()
@@ -537,6 +580,7 @@ plSwimStrategy::plSwimStrategy(plPhysicalControllerCore* core)
     ,fBuoyancy(0.f)
     ,fSurfaceHeight(0.0f)
     ,fCurrentRegion(nil)
+    ,fUpEnabled(false)
 {
     fPreferedControllerHeight=kSWIMHEIGHT;
     fPreferedControllerWidth=kSWIMRADIUS;
@@ -567,6 +611,11 @@ void plSwimStrategy::IAdjustBuoyancy()
         fBuoyancy = 0.f; // Same as being above ground. Plain old gravity.
     else if(depth >= 5.0f) fBuoyancy=3.0f;//completely Submereged
     else fBuoyancy =(depth/surfaceDepth );
+
+    if(depth < 5)
+        fUpEnabled = false;
+    else
+        fUpEnabled = true;
     
 }
 void plSwimStrategy::Apply(float delSecs)
@@ -669,6 +718,7 @@ void plSwimStrategy::Update(float delSecs)
 {
     hsAssert(fCore,"Running Update: but have no Core");
     float AngularVelocity=fCore->GetAngularVelocity();
+    float PitchVelocity=fCore->GetPitchVelocity();
     hsVector3 LinearVelocity=fCore->GetLinearVelocity();
     if (!fCore->IsEnabled() || fCore->IsKinematic())
     {
@@ -681,17 +731,19 @@ void plSwimStrategy::Update(float delSecs)
     {
         fCore->MoveActorToSim();
 
-        if (AngularVelocity != 0.f)
+        if ((AngularVelocity != 0.f) || (PitchVelocity != 0.f))
         {
             float deltaAngle=AngularVelocity*delSecs;
-            fCore->IncrementAngle( deltaAngle);
+            float deltaPitch=PitchVelocity*delSecs;
+            fCore->IncrementAngleSwim( deltaAngle, deltaPitch, fUpEnabled);
         }
         fCore->UpdateWorldRelativePos();
         fCore->SendCorrectionMessages();    
     }
     LinearVelocity.Set(0.f, 0.f, 0.f);
     AngularVelocity = 0.f;
-    fCore->SetVelocities(LinearVelocity,AngularVelocity);
+    PitchVelocity = 0.f;
+    fCore->SetVelocities(LinearVelocity,AngularVelocity,PitchVelocity);
 }
 void plSwimStrategy::IAddContactNormals(hsVector3& vec)
 {   
