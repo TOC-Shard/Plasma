@@ -79,8 +79,7 @@ public:
 protected:
     void IStartWading();
     void IStartSwimming(bool is2D);
-    hsBool IProcessSwimming2D(double time, float elapsed);
-    hsBool IProcessSwimming3D(double time, float elapsed);
+    hsBool IProcessSwimming(double time, float elapsed);
     hsBool IProcessWading(double time, float elapsed);
     hsBool IProcessClimbingOut(double time, float elapsed);
     hsBool IProcessBehaviors(double time, float elapsed);
@@ -95,6 +94,7 @@ protected:
     float fSurfaceDistance;
     plLOSRequestMsg *fSurfaceProbeMsg;
     plSwimRegionInterface *fCurrentRegion;
+    bool fIs2D;
     
     enum Mode {
         kWading,
@@ -118,6 +118,15 @@ protected:
         kTreadTurnLeft,
         kTreadTurnRight,
         kSwimBehaviorMax,
+    };
+
+    enum
+    {
+        kSwimUp,
+        kSwimDown,
+        kSwimPitchUp,
+        kSwimPitchDown,
+        kSwim3DBehaviorMax,
     };
 };
 

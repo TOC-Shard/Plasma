@@ -256,6 +256,8 @@ public:
     float    GetTurnStrength() const;
     float    GetKeyTurnStrength() const;
     float    GetAnalogTurnStrength() const;
+    float    GetPitchStrength() const;
+    float    GetKeyPitchStrength() const;
     void        SetReverseFBOnIdle(bool val);
     hsBool      IsFBReversed();
 
@@ -267,6 +269,8 @@ public:
     bool FastKeyDown() const;
     bool TurnLeftKeyDown() const;
     bool TurnRightKeyDown() const;
+    bool UpKeyDown() const;
+    bool DownKeyDown() const;
     bool JumpKeyDown() const;
     bool ExitModeKeyDown() const;
     void SetForwardKeyDown();

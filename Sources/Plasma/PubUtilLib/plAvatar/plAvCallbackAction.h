@@ -136,6 +136,8 @@ public:
     void SetTurnStrength(float val) { fTurnStr = val; }
     float GetTurnStrength() { return fTurnStr; }
     virtual void ActivateController()=0;
+    void SetPitchStrength(float val) { fPitchStr = val; }
+    float GetPitchStrength() { return fPitchStr; }
 protected:
     plSceneObject* fRootObject;
     plPhysicalControllerCore* fController;
@@ -143,6 +145,7 @@ protected:
     float fAnimAngVel;
     hsVector3 fAnimPosVel;
     float fTurnStr; // Explicit turning, separate from animations
+    float fPitchStr;
 };
 
 class plWalkingController : public plAnimatedController
@@ -199,6 +202,7 @@ public :
         fSwimmingStrategy->SetSurface(region,surfaceHeight);
     }
     float GetBuoyancy() { return fSwimmingStrategy->GetBuoyancy(); }
+    float GetUpEnabled() { return fSwimmingStrategy->GetUpEnabled(); }
     hsBool IsOnGround() { return fSwimmingStrategy->IsOnGround(); }
     hsBool HadContacts() { return fSwimmingStrategy->HadContacts();}
     void Enable(bool en){if (fController) fController->Enable(en);}

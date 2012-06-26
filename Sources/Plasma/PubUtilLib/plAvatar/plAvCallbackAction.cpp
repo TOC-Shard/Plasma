@@ -61,6 +61,7 @@ plAnimatedController::plAnimatedController(plSceneObject* rootObject, plAGApplic
     , fRootApp(rootApp)
     , fController(controller)
     , fTurnStr(0.f)
+    , fPitchStr(0.f)
     , fAnimAngVel(0.f)
     , fAnimPosVel(0.f, 0.f, 0.f)
 {
@@ -93,7 +94,7 @@ void plAnimatedController::RecalcVelocity(double timeNow, double timePrev, hsBoo
     }
 
     if (fController)
-        fController->SetVelocities(fAnimPosVel, fAnimAngVel + fTurnStr);
+        fController->SetVelocities(fAnimPosVel, fAnimAngVel + fTurnStr, fPitchStr);
 }
 
 ///////////////////////////////////////////////////////////////////////////
