@@ -46,7 +46,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 
 #include "pnAsyncCore/pnAsyncCore.h"
 #include "plNetGameLib/plNetGameLib.h"
-#include "pfConsoleCore/pfConsoleEngine.h"
+#include "pfConsoleCore/pfServerIni.h"
 #include "pfPatcher/plManifests.h"
 
 constexpr int kNetTransTimeout = 5 * 60 * 1000;                     // 5m
@@ -59,13 +59,16 @@ plFilePatcher::plFilePatcher(plFileName serverIni)
 {
 }
 
-PF_CONSOLE_LINK_FILE(Core)
 bool plFilePatcher::ILoadServerIni()
 {
-    PF_CONSOLE_INITIALIZE(Core);
+    try {
+        pfServerIni::Load(fServerIni);
+    } catch (const pfServerIniParseException& exc) {
+        ISetNetError(ST::format("Error in server config file {}: {}", fServerIni, exc.what()));
+        return false;
+    }
 
-    pfConsoleEngine console;
-    return console.ExecuteFile(fServerIni);
+    return true;
 }
 
 void plFilePatcher::IInitNetCore()
@@ -112,9 +115,9 @@ void plFilePatcher::IRequestFileSrvInfo()
     uint32_t num = GetGateKeeperSrvHostnames(addrs);
     NetCliGateKeeperStartConnect(addrs, num);
 
-    NetCliGateKeeperFileSrvIpAddressRequest([](ENetError result, void* param, const ST::string& addr) {
-        static_cast<plFilePatcher*>(param)->IHandleFileSrvInfo(result, addr);
-    }, this, true);
+    NetCliGateKeeperFileSrvIpAddressRequest(true, [this](auto result, auto addr) {
+        IHandleFileSrvInfo(result, addr);
+    });
 }
 
 void plFilePatcher::IHandleFileSrvInfo(ENetError result, const ST::string& addr)

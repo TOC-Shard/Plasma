@@ -42,21 +42,12 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 
 #include "HeadSpin.h"
 #include "hsBitVector.h"
-#include "pnKeyedObject/plKey.h"
 #include "hsResMgr.h"
 #include "hsStream.h"
 
 #include "plInputEventMsg.h"
 
 plInputEventMsg::plInputEventMsg() :
-fEvent(-1)
-{
-    SetBCastFlag(plMessage::kBCastByType);
-}
-
-plInputEventMsg::plInputEventMsg(const plKey &s, 
-            const plKey &r, 
-            const double* t) :
 fEvent(-1)
 {
     SetBCastFlag(plMessage::kBCastByType);
@@ -114,16 +105,6 @@ plControlEventMsg::plControlEventMsg() :
     fControlPct = 1.0f;
     SetBCastFlag(plMessage::kPropagateToModifiers);
     SetBCastFlag(plMessage::kBCastByType, false);
-}
-
-plControlEventMsg::plControlEventMsg(const plKey &s, 
-            const plKey &r, 
-            const double* t) :
-    fCmd()
-{
-    fControlPct = 1.0f;
-    SetBCastFlag(plMessage::kBCastByType, false);
-    SetBCastFlag(plMessage::kPropagateToModifiers);
 }
 
 void plControlEventMsg::Read(hsStream* stream, hsResMgr* mgr)
@@ -215,12 +196,6 @@ plKeyEventMsg::plKeyEventMsg()
 {
 }
 
-plKeyEventMsg::plKeyEventMsg(const plKey &s, 
-                             const plKey &r, 
-                             const double* t)
-{
-}
-
 plKeyEventMsg::~plKeyEventMsg()
 {
 }
@@ -248,12 +223,6 @@ void plKeyEventMsg::Write(hsStream* stream, hsResMgr* mgr)
 }
 
 plDebugKeyEventMsg::plDebugKeyEventMsg()
-{
-}
-
-plDebugKeyEventMsg::plDebugKeyEventMsg(const plKey &s, 
-                                       const plKey &r, 
-                                       const double* t)
 {
 }
 
@@ -321,13 +290,7 @@ void plIMouseBEventMsg::Write(hsStream* stream, hsResMgr* mgr)
     stream->WriteLE16(fButton);
 }
 
-plMouseEventMsg::plMouseEventMsg() : fXPos(0.0f),fYPos(0.0f),fDX(0.0f),fDY(0.0f),fButton(0)
-{
-}
-
-plMouseEventMsg::plMouseEventMsg(const plKey &s, 
-                                 const plKey &r, 
-                                 const double* t)
+plMouseEventMsg::plMouseEventMsg() : fXPos(), fYPos(), fDX(), fDY(), fWheelDelta(), fButton()
 {
 }
 

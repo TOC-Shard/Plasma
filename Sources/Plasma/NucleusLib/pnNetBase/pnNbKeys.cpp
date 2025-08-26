@@ -43,6 +43,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "pnNbKeys.h"
 
 // Auth Server
+<<<<<<< HEAD
 uint32_t kAuthDhGValue = 64;
 uint8_t kAuthDhNData[kNetDiffieHellmanKeyBits / 8] = {0};
 uint8_t kAuthDhXData[kNetDiffieHellmanKeyBits / 8] = {0};
@@ -56,3 +57,12 @@ uint8_t kGameDhXData[kNetDiffieHellmanKeyBits / 8] = {0};
 uint32_t kGateKeeperDhGValue = 64;
 uint8_t kGateKeeperDhNData[kNetDiffieHellmanKeyBits / 8] = {0};
 uint8_t kGateKeeperDhXData[kNetDiffieHellmanKeyBits / 8] = {0};
+=======
+NetDhConstants gNetAuthDhConstants = {kNetAuthDefaultDhGValue};
+
+// Game Server
+NetDhConstants gNetGameDhConstants = {kNetGameDefaultDhGValue};
+
+// GateKeeper Server
+NetDhConstants gNetGateKeeperDhConstants = {kNetGateKeeperDefaultDhGValue};
+>>>>>>> c336cbc0483715ab68e944277a40f70d5221a10c

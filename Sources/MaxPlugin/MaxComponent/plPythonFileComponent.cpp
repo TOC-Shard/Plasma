@@ -80,6 +80,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "plAvatar/plSwimRegion.h"
 #include "plSurface/plGrassShaderMod.h"
 #include "plGrassComponent.h"
+#include "plSurface/plLayer.h"
 
 #include "plMessageBox/hsMessageBox.h"
 
@@ -482,7 +483,7 @@ bool plPythonFileComponent::Convert(plMaxNode *node, plErrorMsg *pErrMsg)
                         found_atleast_one_good_one = true;
                     }
                 }
-                if ( !found_atleast_one_good_one )
+                if ( !found_atleast_one_good_one && numKeys > 0 )
                 {
                     pErrMsg->Set(
                         true,
@@ -516,7 +517,7 @@ bool plPythonFileComponent::Convert(plMaxNode *node, plErrorMsg *pErrMsg)
                                 found_atleast_one_good_one = true;
                             }
                         }
-                        if ( !found_atleast_one_good_one )
+                        if ( !found_atleast_one_good_one && comp->NumTargets() > 0 )
                         {
                             pErrMsg->Set(
                                 true,
@@ -903,7 +904,7 @@ bool plPythonFileComponent::Convert(plMaxNode *node, plErrorMsg *pErrMsg)
                             }
                         }
                     }
-                    if ( number_of_real_targets_found != 1 )
+                    if ( number_of_real_targets_found != 1 && count > 0 )
                     {
                         // there is zero or more than one node attached to this exclude region
                         ST::string msg;
@@ -986,6 +987,21 @@ bool plPythonFileComponent::Convert(plMaxNode *node, plErrorMsg *pErrMsg)
                             pyParam.SetToGrassShaderComponent(shaderKey);
                             mod->AddParameter(pyParam);
                         }
+                    }
+                }
+            }
+            break;
+        case plAutoUIParam::kTypeLayer:
+            {
+                int numKeys = param->GetCount(pb);
+                for (int i = 0; i < numKeys; i++)
+                {
+                    plKey key = param->GetKey(pb, i);
+                    // make sure we got a key and that it is a plLayer
+                    if (key && plLayer::ConvertNoRef(key->GetObjectPtr()))
+                    {
+                        pyParam.SetToLayer(key);
+                        mod->AddParameter(pyParam);
                     }
                 }
             }

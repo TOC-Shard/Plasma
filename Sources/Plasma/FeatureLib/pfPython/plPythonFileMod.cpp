@@ -316,7 +316,7 @@ plPythonFileMod::~plPythonFileMod()
     // then get rid of this module
     // NOTE: fModule shouldn't be made in the plugin, only at runtime
     if (!fModuleName.empty() && fModule) {
-        //_PyModule_Clear(fModule);
+        //PythonInterface::ClearModule(fModule);
         PyObject* m;
         PyObject* modules = PyImport_GetModuleDict();
         if (modules && (m = PyDict_GetItemString(modules, fModuleName.c_str())) && PyModule_Check(m)) {
@@ -561,6 +561,7 @@ void plPythonFileMod::AddTarget(plSceneObject* sobj)
                         case plPythonParameter::kClusterComponentList:
                         case plPythonParameter::kMaterialAnimation:
                         case plPythonParameter::kGrassShaderComponent:
+                        case plPythonParameter::kLayer:
                             if (parameter.fObjectKey) {
                                 // create pyKey for the object
                                 value = pyKey::New(parameter.fObjectKey);
