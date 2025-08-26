@@ -92,7 +92,6 @@ class pfGameUIInputInterface : public plInputInterface
         uint8_t   fButtonState;
         bool    fHaveInterestingCursor;
         uint32_t  fCurrentCursor;
-        float     fAccumulatedWheelDelta;
 
         bool    IHandleCtrlCmd(plCtrlCmd *cmd) override;
         bool    IControlCodeEnabled(ControlEventCode code) override;
@@ -492,7 +491,7 @@ void    pfGameGUIMgr::IActivateGUI( bool activate )
 //// IHandleMouse ////////////////////////////////////////////////////////////
 //  Distributes mouse events to the dialogs currently active
 
-bool pfGameGUIMgr::IHandleMouse(EventType event, float mouseX, float mouseY, float mouseWheel, uint8_t modifiers, uint32_t *desiredCursor)
+bool    pfGameGUIMgr::IHandleMouse( EventType event, float mouseX, float mouseY, uint8_t modifiers, uint32_t *desiredCursor ) 
 {
     pfGUIDialogMod  *dlg;
 
@@ -508,7 +507,7 @@ bool pfGameGUIMgr::IHandleMouse(EventType event, float mouseX, float mouseY, flo
 
     for (dlg = fActiveDialogs; dlg != nullptr; dlg = dlg->GetNext())
     {
-        if( dlg->HandleMouseEvent( event, mouseX, mouseY, mouseWheel, modifiers ) ||
+        if( dlg->HandleMouseEvent( event, mouseX, mouseY, modifiers ) ||
             ( dlg->HasFlag( pfGUIDialogMod::kModal ) && event != pfGameGUIMgr::kMouseUp ) )
         {
             // If this dialog handled it, also get the cursor it wants
@@ -594,7 +593,6 @@ pfGameUIInputInterface::pfGameUIInputInterface( pfGameGUIMgr * const mgr ) : plI
     fModifiers = pfGameGUIMgr::kNoModifiers;
     fButtonState = 0;
     fHaveInterestingCursor = false;
-    fAccumulatedWheelDelta = 0.f;
     SetEnabled( true );         // Always enabled
     fCurrentCursor = kCursorUp;
 
@@ -740,37 +738,34 @@ bool    pfGameUIInputInterface::InterpretInputEvent( plInputEventMsg *pMsg )
         return handled || modal; // we "handle" it if we are modal, even if it didn't do anything
     }
 
-    plMouseEventMsg* pMouseMsg = plMouseEventMsg::ConvertNoRef(pMsg);
-    if (pMouseMsg && fManager->IsClickEnabled()) {
-        if (pMouseMsg->GetButton() == kLeftButtonDown) {
-            handled = fGUIManager->IHandleMouse(pfGameGUIMgr::kMouseDown, pMouseMsg->GetXPos(), pMouseMsg->GetYPos(), 0.f, fModifiers, &fCurrentCursor);
+    plMouseEventMsg *pMouseMsg = plMouseEventMsg::ConvertNoRef( pMsg );
+    if( pMouseMsg && fManager->IsClickEnabled() )
+    {
+        if( pMouseMsg->GetButton() == kLeftButtonDown )
+        {
+            handled = fGUIManager->IHandleMouse( pfGameGUIMgr::kMouseDown, pMouseMsg->GetXPos(), pMouseMsg->GetYPos(), fModifiers, &fCurrentCursor );
             if (handled)
                 fButtonState |= kLeftButtonDown;
-        } else if (pMouseMsg->GetButton() == kLeftButtonUp) {
-            handled = fGUIManager->IHandleMouse(pfGameGUIMgr::kMouseUp, pMouseMsg->GetXPos(), pMouseMsg->GetYPos(), 0.f, fModifiers, &fCurrentCursor);
+        }
+        else if( pMouseMsg->GetButton() == kLeftButtonUp )
+        {
+            handled = fGUIManager->IHandleMouse( pfGameGUIMgr::kMouseUp, pMouseMsg->GetXPos(), pMouseMsg->GetYPos(), fModifiers, &fCurrentCursor );
             if ((handled) || (fButtonState & kLeftButtonDown)) // even if we didn't handle the mouse up, if we think the button is still down, we should clear our flag
                 fButtonState &= ~kLeftButtonDown;
-        } else if (pMouseMsg->GetButton() == kLeftButtonDblClk) {
-            handled = fGUIManager->IHandleMouse(pfGameGUIMgr::kMouseDblClick, pMouseMsg->GetXPos(), pMouseMsg->GetYPos(), 0.f, fModifiers, &fCurrentCursor);
-        } else if (pMouseMsg->GetButton() == kWheelPos || pMouseMsg->GetButton() == kWheelNeg) {
-            fAccumulatedWheelDelta += pMouseMsg->GetWheelDelta();
-
-            if (fabs(fAccumulatedWheelDelta) >= 120.f) {
-                handled = fGUIManager->IHandleMouse(pfGameGUIMgr::kMouseWheel, pMouseMsg->GetXPos(), pMouseMsg->GetYPos(), fAccumulatedWheelDelta, fModifiers, &fCurrentCursor);
-                fAccumulatedWheelDelta = 0.f;
-            }
-        } else if (fButtonState & kLeftButtonDown) {
-            handled = fGUIManager->IHandleMouse(pfGameGUIMgr::kMouseDrag, pMouseMsg->GetXPos(), pMouseMsg->GetYPos(), 0.f, fModifiers, &fCurrentCursor);
-        } else {
-            handled = fGUIManager->IHandleMouse(pfGameGUIMgr::kMouseMove, pMouseMsg->GetXPos(), pMouseMsg->GetYPos(), 0.f, fModifiers, &fCurrentCursor);
         }
+        else if( pMouseMsg->GetButton() == kLeftButtonDblClk )
+            handled = fGUIManager->IHandleMouse( pfGameGUIMgr::kMouseDblClick, pMouseMsg->GetXPos(), pMouseMsg->GetYPos(), fModifiers, &fCurrentCursor );
+        else if( fButtonState & kLeftButtonDown )
+            handled = fGUIManager->IHandleMouse( pfGameGUIMgr::kMouseDrag, pMouseMsg->GetXPos(), pMouseMsg->GetYPos(), fModifiers, &fCurrentCursor );
+        else
+            handled = fGUIManager->IHandleMouse( pfGameGUIMgr::kMouseMove, pMouseMsg->GetXPos(), pMouseMsg->GetYPos(), fModifiers, &fCurrentCursor );
 
         fHaveInterestingCursor = handled;
         return handled;
     }
 
     return false;
-}
+}   
 
 uint32_t  pfGameUIInputInterface::GetCurrentCursorID() const
 {

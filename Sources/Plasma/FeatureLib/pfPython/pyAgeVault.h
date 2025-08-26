@@ -66,6 +66,7 @@ class pyVaultFolderNode;
 class pyVaultNode;
 class pyVaultPlayerInfoListNode;
 class pyVaultTextNoteNode;
+namespace ST { class string; }
 
 class pyAgeVault
 {
@@ -97,6 +98,8 @@ public:
     PyObject*       GetPeopleIKnowAboutFolder(); // returns pyVaultPlayerInfoListNode
     // PERSONAL AGE SPECIFIC
     PyObject*       GetBookshelfFolder (); // returns pyVaultFolderNode
+    // NEXUS SPECIFIC
+    PyObject*       GetPublicAgesFolder(); // returns pyVaultFolderNode
     PyObject*       GetSubAgeLink( const pyAgeInfoStruct & info ); // returns pyVaultAgeLinkNode
     // AGE DEVICES. AKA IMAGERS, WHATEVER.
     // Add a new device.

@@ -52,6 +52,8 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 
 #include "pyGlueDefinitions.h"
 
+namespace ST { class string; }
+
 class pyKeyMap
 {
 protected:

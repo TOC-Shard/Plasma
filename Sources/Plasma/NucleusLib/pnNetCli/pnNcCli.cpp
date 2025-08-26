@@ -54,7 +54,6 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "hsLockGuard.h"
 #include <mutex>
 #include <string>
-#include <string_theory/format>
 #include <utility>
 
 #ifdef HS_DEBUGGING
@@ -256,6 +255,9 @@ static void BufferedSendData (
     const uintptr_t  msg[], 
     unsigned            fieldCount
 ) {
+    #define ASSERT_MSG_VALID(expr)          \
+        ASSERTMSG(expr, "Invalid message definition");
+
     ASSERT(cli);
     ASSERT(msg);
     ASSERT(fieldCount);
@@ -273,6 +275,7 @@ static void BufferedSendData (
     const uint16_t msgId = hsToLE16((uint16_t)msg[0]);
     AddToSendBuffer(cli, sizeof(uint16_t), (const void*)&msgId);
     ++msg;
+    ASSERT_MSG_VALID(msg < msgEnd);
 
     // insert fields into command stream
     uint32_t varCount  = 0;
@@ -280,7 +283,6 @@ static void BufferedSendData (
     const NetMsgField * cmd     = sendMsg->msg->fields;
     const NetMsgField * cmdEnd  = cmd + sendMsg->msg->count;
     for (; cmd < cmdEnd; ++msg, ++cmd) {
-        ASSERT(msg < msgEnd);
         switch (cmd->type) {
             case kNetMsgFieldInteger: {
                 const unsigned count = cmd->count ? cmd->count : 1;
@@ -318,7 +320,7 @@ static void BufferedSendData (
                 // Use less-than instead of less-or-equal because
                 // we reserve one space for the NULL terminator
                 const uint16_t length = (uint16_t) std::char_traits<char16_t>::length((const char16_t *) *msg);
-                hsAssert(length < cmd->count, ST::format("String of {} characters was passed into a message field that only allows {} characters", length, cmd->count - 1).c_str());
+                ASSERT_MSG_VALID(length < cmd->count);
 
                 // Write actual string length
                 uint16_t size = hsToLE16(length);
@@ -639,7 +641,7 @@ static void ClientConnect (NetCli * cli) {
         unsigned bytes;
         NetCli_Cli2Srv_Connect msg;
         unsigned char * data = serverSeed.GetData_LE(&bytes); // will be 0 if encryption is disabled, and thereby send an empty seed
-        hsAssert(bytes <= sizeof(msg.dh_y_data), "4");
+        ASSERTMSG(bytes <= sizeof(msg.dh_y_data), "4");
         msg.message    = kNetCliCli2SrvConnect;
         msg.length     = (uint8_t) (sizeof(msg) - sizeof(msg.dh_y_data) +  bytes);
         memcpy(msg.dh_y_data, data, bytes);

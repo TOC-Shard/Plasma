@@ -72,6 +72,8 @@ class plKey;
 class plPageInfo;
 class plRegistryPageNode;
 
+namespace ST { class string; }
+
 class plKeyFinder
 {
 public: 

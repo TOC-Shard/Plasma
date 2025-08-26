@@ -57,6 +57,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 
 class pyKey;
 class pyPoint3;
+namespace ST { class string; }
 
 class pyNotify
 {

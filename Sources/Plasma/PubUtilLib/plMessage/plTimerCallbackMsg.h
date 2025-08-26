@@ -48,6 +48,7 @@ class plTimerCallbackMsg : public plMessage
 {
 public:
     plTimerCallbackMsg() { }
+    plTimerCallbackMsg(const plKey &s, const plKey &r, const double* t) { }
     plTimerCallbackMsg(const plKey &r, int32_t id = 0) { AddReceiver(r); fID = id;}
     ~plTimerCallbackMsg() { }
 

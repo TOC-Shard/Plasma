@@ -705,7 +705,7 @@ bool    plBaseSoundEmitterComponent::LookupLatestAsset( const char *waveName, ch
         }
 
         // Copy the string over and go
-        strcpy(retPath, assetPath);
+        hsStrcpy( retPath, assetPath );
         return true;
     }
 

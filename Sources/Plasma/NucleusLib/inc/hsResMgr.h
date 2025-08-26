@@ -47,6 +47,8 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "plLoadMask.h"
 #include "plRefFlags.h"
 
+namespace ST { class string; }
+
 class hsStream;
 class plKey;
 class plKeyImp;

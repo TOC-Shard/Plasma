@@ -44,7 +44,6 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 
 #include "hsStream.h"
 #include "plCmdParser.h"
-#include "hsMain.inl"
 
 #include <vector>
 #include <string>
@@ -339,7 +338,7 @@ void PrintUsage()
     ST::printf("\t-h\tHelp   - Print this help\n");
 }
 
-static int hsMain(std::vector<ST::string> args)
+int main(int argc, char *argv[])
 {
     // Parse arguments
     ST::string packDir = ".";
@@ -351,6 +350,12 @@ static int hsMain(std::vector<ST::string> args)
         { kCmdArgFlagged  | kCmdTypeBool,   "help",  kArgHelp1},
         { kCmdArgFlagged  | kCmdTypeBool,   "?",     kArgHelp2},
     };
+
+    std::vector<ST::string> args;
+    args.reserve(argc);
+    for (size_t i = 0; i < argc; i++) {
+        args.emplace_back(ST::string::from_utf8(argv[i]));
+    }
 
     plCmdParser cmdParser(cmdLineArgs, std::size(cmdLineArgs));
     if (cmdParser.Parse(args)) {

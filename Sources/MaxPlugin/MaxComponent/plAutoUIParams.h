@@ -92,7 +92,6 @@ public:
         kTypeClusterComponent,
         kTypeMaterialAnimation,
         kTypeGrassComponent,
-        kTypeLayer
     };
 
     plAutoUIParam(ParamID id, ST::string name);
@@ -392,17 +391,6 @@ public:
 
     void CreateKeyArray(IParamBlock2* pb);
     void DestroyKeyArray();
-};
-
-class plPickLayerButtonParam : public plPickMaterialButtonParam
-{
-public:
-    plPickLayerButtonParam(ParamID id, ST::string name)
-        : plPickMaterialButtonParam(id, std::move(name))
-    { }
-
-    int GetParamType() override { return kTypeLayer; }
-    plKey GetKey(IParamBlock2 *pb, int idx = 0) override;
 };
 
 class plDropDownListParam : public plAutoUIParam

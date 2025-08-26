@@ -48,16 +48,6 @@ Mead, WA   99021
 #include <QPainter>
 #include <QPicture>
 
-unsigned int plFontPreview::GetBackgroundColor() const
-{
-    return palette().window().color().rgba();
-}
-
-unsigned int plFontPreview::GetFontColor() const
-{
-    return palette().text().color().rgba();
-}
-
 void plFontPreview::Update(plFont *font, const QString &text)
 {
     fFont = font;
@@ -66,7 +56,7 @@ void plFontPreview::Update(plFont *font, const QString &text)
 
     if (fFont == nullptr) {
         QPainter p(&fPreview);
-        p.fillRect(0, 0, width(), height(), GetBackgroundColor());
+        p.fillRect(0, 0, width(), height(), Qt::white);
 
         update();
         return;
@@ -76,9 +66,9 @@ void plFontPreview::Update(plFont *font, const QString &text)
 
     // Create us a mipmap to render onto, render onto it, then copy that to our DC
     plMipmap *mip = new plMipmap(width(), height(), plMipmap::kARGB32Config, 1);
-    memset(mip->GetImage(), GetBackgroundColor(), mip->GetWidth() * mip->GetHeight() * 4);
+    memset(mip->GetImage(), 0xff, mip->GetWidth() * mip->GetHeight() * 4);
 
-    fFont->SetRenderColor(GetFontColor());
+    fFont->SetRenderColor(0xff000000);
     fFont->SetRenderFlag(plFont::kRenderClip, true);
     fFont->SetRenderClipRect(0, 0, (int16_t)width(), (int16_t)height());
     uint16_t w, h, a, lastX, lastY;
@@ -112,8 +102,8 @@ void plFontPreview::Update(plFont *font, const QString &text)
 
 void plFontPreview::paintEvent(QPaintEvent *event)
 {
-    QFrame::paintEvent(event);
-
     QPainter painter(this);
     painter.drawImage(0, 0, fPreview);
+
+    QFrame::paintEvent(event);
 }

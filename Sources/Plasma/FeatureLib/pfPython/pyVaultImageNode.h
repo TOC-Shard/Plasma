@@ -55,6 +55,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 
 class plMipmap;
 class pyImage;
+namespace ST { class string; }
 
 class pyVaultImageNode : public pyVaultNode
 {

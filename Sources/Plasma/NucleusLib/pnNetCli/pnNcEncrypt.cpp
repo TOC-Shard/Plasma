@@ -105,10 +105,8 @@ void NetMsgCryptClientStart (
     else {
         // Client chooses b and y on connect
         plBigNum g(DH_G);
-        plBigNum seed;
-        seed.FromData_BE(seedBytes, seedData);
-        plBigNum b;
-        b.Rand(kNetDiffieHellmanKeyBits, &seed);
+        plBigNum seed(seedBytes, seedData);
+        plBigNum b; b.Rand(kNetDiffieHellmanKeyBits, &seed);
 
         // Client computes key: kb = x^b mod n
         clientSeed->PowMod(*DH_X, b, *DH_N);

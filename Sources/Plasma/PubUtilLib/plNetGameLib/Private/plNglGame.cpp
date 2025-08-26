@@ -91,6 +91,7 @@ struct CliGmConn : hsRefCnt, AsyncNotifySocketCallbacks {
 //============================================================================
 struct JoinAgeRequestTrans : NetGameTrans {
     FNetCliGameJoinAgeRequestCallback   m_callback;
+    void *                              m_param;
     // sent
     unsigned                            m_ageMcpId;
     plUUID                              m_accountUuid;
@@ -100,7 +101,8 @@ struct JoinAgeRequestTrans : NetGameTrans {
         unsigned                            ageMcpId,
         const plUUID&                       accountUuid,
         unsigned                            playerInt,
-        FNetCliGameJoinAgeRequestCallback   callback
+        FNetCliGameJoinAgeRequestCallback   callback,
+        void *                              param
     );
 
     bool Send() override;
@@ -524,9 +526,11 @@ JoinAgeRequestTrans::JoinAgeRequestTrans (
     unsigned                            ageMcpId,
     const plUUID&                       accountUuid,
     unsigned                            playerInt,
-    FNetCliGameJoinAgeRequestCallback   callback
+    FNetCliGameJoinAgeRequestCallback   callback,
+    void *                              param
 ) : NetGameTrans(kJoinAgeRequestTrans)
-,   m_callback(std::move(callback))
+,   m_callback(callback)
+,   m_param(param)
 ,   m_ageMcpId(ageMcpId)
 ,   m_accountUuid(accountUuid)
 ,   m_playerInt(playerInt)
@@ -553,7 +557,10 @@ bool JoinAgeRequestTrans::Send () {
 
 //============================================================================
 void JoinAgeRequestTrans::Post () {
-    m_callback(m_result);
+    m_callback(
+        m_result,
+        m_param
+    );
 }
 
 //============================================================================
@@ -654,7 +661,9 @@ void GameInitialize () {
         kNetProtocolCli2Game,
         s_send, std::size(s_send),
         s_recv, std::size(s_recv),
-        gNetGameDhConstants
+        kGameDhGValue,
+        plBigNum(sizeof(kGameDhXData), kGameDhXData),
+        plBigNum(sizeof(kGameDhNData), kGameDhNData)
     );
 }
 
@@ -750,13 +759,15 @@ void NetCliGameJoinAgeRequest (
     unsigned                            ageMcpId,
     const plUUID&                       accountUuid,
     unsigned                            playerInt,
-    FNetCliGameJoinAgeRequestCallback   callback
+    FNetCliGameJoinAgeRequestCallback   callback,
+    void *                              param
 ) {
     JoinAgeRequestTrans * trans = new JoinAgeRequestTrans(
         ageMcpId,
         accountUuid,
         playerInt,
-        std::move(callback)
+        callback,
+        param
     );
     NetTransSend(trans);
 }
@@ -765,7 +776,7 @@ void NetCliGameJoinAgeRequest (
 void NetCliGameSetRecvBufferHandler (
     FNetCliGameRecvBufferHandler    handler
 ) {
-    s_bufHandler = std::move(handler);
+    s_bufHandler = handler;
 }
 
 //============================================================================
@@ -793,7 +804,7 @@ void NetCliGamePropagateBuffer (
 //============================================================================
 void NetCliGameSetRecvGameMgrMsgHandler(FNetCliGameRecvGameMgrMsgHandler handler)
 {
-    s_gameMgrMsgHandler = std::move(handler);
+    s_gameMgrMsgHandler = handler;
 }
 
 //============================================================================

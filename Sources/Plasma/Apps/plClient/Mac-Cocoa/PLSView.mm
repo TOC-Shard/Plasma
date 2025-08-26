@@ -128,30 +128,6 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
     [self updateClientMouseLocation:event];
 }
 
-// MARK: Mouse scroll
-- (void)scrollWheel:(NSEvent *)event
-{
-    plMouseEventMsg* pMsg = new plMouseEventMsg;
-    float zDelta = [event scrollingDeltaY];
-    pMsg->SetWheelDelta(zDelta);
-    if (zDelta < 0)
-        pMsg->SetButton(kWheelNeg);
-    else
-        pMsg->SetButton(kWheelPos);
-
-    CGPoint windowLocation = [event locationInWindow];
-    CGPoint viewLocation = [self convertPoint:windowLocation fromView:nil];
-
-    NSRect windowViewBounds = self.bounds;
-    CGFloat xNormal = (windowLocation.x) / windowViewBounds.size.width;
-    CGFloat yNormal =
-        (windowViewBounds.size.height - windowLocation.y) / windowViewBounds.size.height;
-    pMsg->SetXPos(xNormal);
-    pMsg->SetYPos(yNormal);
-
-    pMsg->Send();
-}
-
 // MARK: Mouse movement
 - (void)mouseMoved:(NSEvent*)event
 {
@@ -215,19 +191,18 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
     CGPoint viewLocation = [self convertPoint:windowLocation fromView:nil];
 
     NSRect windowViewBounds = self.bounds;
-    CGFloat xNormal = (windowLocation.x) / windowViewBounds.size.width;
-    CGFloat yNormal =
+    CGFloat deltaX = (windowLocation.x) / windowViewBounds.size.width;
+    CGFloat deltaY =
         (windowViewBounds.size.height - windowLocation.y) / windowViewBounds.size.height;
 
     plIMouseXEventMsg* pXMsg = new plIMouseXEventMsg;
     plIMouseYEventMsg* pYMsg = new plIMouseYEventMsg;
 
-    pXMsg->fX = xNormal;
-    pYMsg->fY = yNormal;
+    pXMsg->fWx = viewLocation.x;
+    pXMsg->fX = deltaX;
 
-    // Plasma internally uses input coords as display coords
-    pXMsg->fWx = viewLocation.x * self.window.screen.backingScaleFactor;
-    pYMsg->fWy = (windowViewBounds.size.height - windowLocation.y) * self.window.screen.backingScaleFactor;
+    pYMsg->fWy = (windowViewBounds.size.height - windowLocation.y);
+    pYMsg->fY = deltaY;
 
     @synchronized(self.layer) {
         if (self.inputManager) {
@@ -244,7 +219,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
             newWindowLocation.x = CGRectGetMidX(self.window.contentView.bounds);
 
             // macOS won't generate a new message on warp, need to tell Plasma by hand
-            pXMsg->fWx = newWindowLocation.x * self.window.screen.backingScaleFactor;;
+            pXMsg->fWx = newWindowLocation.x;
             pXMsg->fX = 0.5f;
             self.inputManager->MsgReceive(pXMsg);
         }
@@ -253,7 +228,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
             newWindowLocation.y = CGRectGetMidY(self.window.contentView.bounds);
 
             // macOS won't generate a new message on warp, need to tell Plasma by hand
-            pYMsg->fWy = newWindowLocation.y * self.window.screen.backingScaleFactor;;
+            pYMsg->fWy = newWindowLocation.y;
             pYMsg->fY = 0.5f;
             self.inputManager->MsgReceive(pYMsg);
         }
@@ -299,6 +274,13 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
     if (newSize.width <= 0 || newSize.width <= 0) {
         return;
     }
+
+#if PLASMA_PIPELINE_METAL
+    _metalLayer.drawableSize = newSize;
+#endif
+    [self.delegate renderView:self
+          didChangeOutputSize:newSize
+                        scale:scaleFactor];
 }
 
 @end

@@ -92,6 +92,8 @@ class plVisMgr;
 
 class plViewTransform;
 
+namespace ST { class string; }
+
 struct PipelineParams
 {
     PipelineParams():

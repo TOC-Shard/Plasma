@@ -50,9 +50,6 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #endif
 #define PLASMA20_SOURCES_PLASMA_PUBUTILLIB_PLNETGAMELIB_PRIVATE_PLNGLAUTH_H
 
-#include <functional>
-#include <vector>
-
 #include "pnEncryption/plChecksum.h"
 
 /*****************************************************************************
@@ -72,7 +69,7 @@ bool NetCliAuthQueryConnected ();
 void NetCliAuthAutoReconnectEnable (bool enable);   // is enabled by default
 
 // Called after the auth/client connection is encrypted
-using FNetCliAuthConnectCallback = std::function<void()>;
+typedef void (*FNetCliAuthConnectCallback)();
 void NetCliAuthSetConnectCallback (
     FNetCliAuthConnectCallback callback
 );
@@ -92,30 +89,34 @@ void NetCliAuthUnexpectedDisconnect ();
 //============================================================================
 // Ping
 //============================================================================
-using FNetCliAuthPingRequestCallback = std::function<void(
+typedef void (*FNetCliAuthPingRequestCallback)(
     ENetError   result,
+    void *      param,
     unsigned    pingAtMs,
     unsigned    replyAtMs,
     unsigned    payloadBytes,
     const uint8_t  payload[]
-)>;
+);
 void NetCliAuthPingRequest (
     unsigned                        pingTimeMs,
     unsigned                        payloadBytes,   // max 64k (pnNetCli enforced upon send)
     const void *                    payload,
-    FNetCliAuthPingRequestCallback  callback
+    FNetCliAuthPingRequestCallback  callback,
+    void *                          param
 );
 
 //============================================================================
 // AccountExists
 //============================================================================
-using FNetCliAuthAccountExistsRequestCallback = std::function<void(
+typedef void (*FNetCliAuthAccountExistsRequestCallback)(
     ENetError   result,
+    void *      param,
     bool        accountExists
-)>;
+);
 void NetCliAuthAccountExistsRequest (
     const char16_t                              accountName[],
-    FNetCliAuthAccountExistsRequestCallback     callback
+    FNetCliAuthAccountExistsRequestCallback     callback,
+    void *                                      param
 );  
 
 //============================================================================
@@ -131,92 +132,112 @@ struct NetCliAuthPlayerInfo {
     NetCliAuthPlayerInfo() : playerInt(), playerFlags(), explorer() { }
 };
 
-using FNetCliAuthLoginRequestCallback = std::function<void(
+typedef void (*FNetCliAuthLoginRequestCallback)(
     ENetError                   result,
+    void *                      param,
     const plUUID&               accountId,
     unsigned                    accountFlags,
     unsigned                    billingType,
     const NetCliAuthPlayerInfo  playerInfoArr[],
     unsigned                    playerCount
-)>;
+);
 void NetCliAuthLoginRequest (
     const ST::string&               accountName,  // nil --> reuse previous acct name
     const ShaDigest *               accountNamePassHash,  // nil --> reuse previous acct pass
     const char16_t                  authToken[],  // nil --> reuse previous auth token
     const char16_t                  os[],  // nil --> reuse previous os
-    FNetCliAuthLoginRequestCallback callback
+    FNetCliAuthLoginRequestCallback callback,
+    void *                          param
 );
 
 //============================================================================
 // Set Player
 //============================================================================
-using FNetCliAuthSetPlayerRequestCallback = std::function<void(ENetError result)>;
+typedef void (*FNetCliAuthSetPlayerRequestCallback)(
+    ENetError       result,
+    void *          param
+);
 void NetCliAuthSetPlayerRequest (
     unsigned                            playerInt,
-    FNetCliAuthSetPlayerRequestCallback callback
+    FNetCliAuthSetPlayerRequestCallback callback,
+    void *                              param
 );
 
 //============================================================================
 // Create Account
 //============================================================================
-using FNetCliAuthAccountCreateRequestCallback = std::function<void(
+typedef void (*FNetCliAuthAccountCreateRequestCallback)(
     ENetError                       result,
+    void *                          param,
     const plUUID&                   accountId
-)>;
+);
 void NetCliAuthAccountCreateRequest (
     const char16_t                          accountName[],
     const char16_t                          accountPass[],
     unsigned                                accountFlags,
     unsigned                                billingType,
-    FNetCliAuthAccountCreateRequestCallback callback
+    FNetCliAuthAccountCreateRequestCallback callback,
+    void *                                  param
 );
 
 //============================================================================
 // Create Account From Key
 //============================================================================
-using FNetCliAuthAccountCreateFromKeyRequestCallback = std::function<void(
+typedef void (*FNetCliAuthAccountCreateFromKeyRequestCallback)(
     ENetError                       result,
+    void *                          param,
     const plUUID&                   accountId,
     const plUUID&                   activationKey
-)>;
+);
 void NetCliAuthAccountCreateFromKeyRequest (
     const char16_t                                  accountName[],
     const char16_t                                  accountPass[],
     plUUID                                          key,
     unsigned                                        billingType,
-    FNetCliAuthAccountCreateFromKeyRequestCallback  callback
+    FNetCliAuthAccountCreateFromKeyRequestCallback  callback,
+    void *                                          param
 );
 
 //============================================================================
 // Create Player
 //============================================================================
-using FNetCliAuthPlayerCreateRequestCallback = std::function<void(
+typedef void (*FNetCliAuthPlayerCreateRequestCallback)(
     ENetError                       result,
+    void *                          param,
     const NetCliAuthPlayerInfo &    playerInfo
-)>;
+);
 void NetCliAuthPlayerCreateRequest (
     const ST::string&                       playerName,
     const ST::string&                       avatarShape,
     const ST::string&                       friendInvite,
-    FNetCliAuthPlayerCreateRequestCallback  callback
+    FNetCliAuthPlayerCreateRequestCallback  callback,
+    void *                                  param
 );
 
 //============================================================================
 // Delete Player
 //============================================================================
-using FNetCliAuthPlayerDeleteRequestCallback = std::function<void(ENetError result)>;
+typedef void (*FNetCliAuthPlayerDeleteRequestCallback)(
+    ENetError                       result,
+    void *                          param
+);
 void NetCliAuthPlayerDeleteRequest (
     unsigned                                playerId,
-    FNetCliAuthPlayerDeleteRequestCallback  callback
+    FNetCliAuthPlayerDeleteRequestCallback  callback,
+    void *                                  param
 );
 
 //============================================================================
 // Upgrade Visitor
 //============================================================================
-using FNetCliAuthUpgradeVisitorRequestCallback = std::function<void(ENetError result)>;
+typedef void (*FNetCliAuthUpgradeVisitorRequestCallback)(
+    ENetError                       result,
+    void *                          param
+);
 void NetCliAuthUpgradeVisitorRequest (
     unsigned                                    playerId,
-    FNetCliAuthUpgradeVisitorRequestCallback    callback
+    FNetCliAuthUpgradeVisitorRequestCallback    callback,
+    void *                                      param
 );
 
 //============================================================================
@@ -238,68 +259,88 @@ void NetCliAuthSetAgePublic (
 // GetPublicAgeList
 //============================================================================
 struct NetAgeInfo;
-using FNetCliAuthGetPublicAgeListCallback = std::function<void(
+typedef void (*FNetCliAuthGetPublicAgeListCallback)(
     ENetError                   result,
+    void *                      param,
     std::vector<NetAgeInfo>     ages
-)>;
+);
 void NetCliAuthGetPublicAgeList (
     const ST::string&                   ageName,
-    FNetCliAuthGetPublicAgeListCallback callback
+    FNetCliAuthGetPublicAgeListCallback callback,
+    void *                              param
 );
 
 //============================================================================
 // Change Password
 //============================================================================
-using FNetCliAuthAccountChangePasswordRequestCallback = std::function<void(ENetError result)>;
+typedef void (*FNetCliAuthAccountChangePasswordRequestCallback)(
+    ENetError                       result,
+    void *                          param
+);
 void NetCliAuthAccountChangePasswordRequest (
     const ST::string&                               accountName,
     const ST::string&                               accountPass,
-    FNetCliAuthAccountChangePasswordRequestCallback callback
+    FNetCliAuthAccountChangePasswordRequestCallback callback,
+    void *                                          param
 );
 
 //============================================================================
 // Set Account Roles
 //============================================================================
-using FNetCliAuthAccountSetRolesRequestCallback = std::function<void(ENetError result)>;
+typedef void (*FNetCliAuthAccountSetRolesRequestCallback)(
+    ENetError                       result,
+    void *                          param
+);
 void NetCliAuthAccountSetRolesRequest (
     const char16_t                                  accountName[],
     unsigned                                        accountFlags,
-    FNetCliAuthAccountSetRolesRequestCallback       callback
+    FNetCliAuthAccountSetRolesRequestCallback       callback,
+    void *                                          param
 );
 
 //============================================================================
 // Set Billing Type
 //============================================================================
-using FNetCliAuthAccountSetBillingTypeRequestCallback = std::function<void(ENetError result)>;
+typedef void (*FNetCliAuthAccountSetBillingTypeRequestCallback)(
+    ENetError                       result,
+    void *                          param
+);
 void NetCliAuthAccountSetBillingTypeRequest (
     const char16_t                                  accountName[],
     unsigned                                        billingType,
-    FNetCliAuthAccountSetBillingTypeRequestCallback callback
+    FNetCliAuthAccountSetBillingTypeRequestCallback callback,
+    void *                                          param
 );
 
 //============================================================================
 // Account Activate
 //============================================================================
-using FNetCliAuthAccountActivateRequestCallback = std::function<void(ENetError result)>;
+typedef void (*FNetCliAuthAccountActivateRequestCallback)(
+    ENetError                       result,
+    void *                          param
+);
 void NetCliAuthAccountActivateRequest (
     const plUUID&                               activationKey,
-    FNetCliAuthAccountActivateRequestCallback   callback
+    FNetCliAuthAccountActivateRequestCallback   callback,
+    void *                                      param
 );
 
 //============================================================================
 // Age
 //============================================================================
-using FNetCliAuthAgeRequestCallback = std::function<void(
+typedef void (*FNetCliAuthAgeRequestCallback)(
     ENetError       result,
+    void *          param,
     unsigned        ageMcpId,
     unsigned        ageVaultId,
     const plUUID&   ageInstId,
     plNetAddress    gameAddr
-)>;
+);
 void NetCliAuthAgeRequest (
     const ST::string&                   ageName,      // "Teledahn"
     const plUUID&                       ageInstId,
-    FNetCliAuthAgeRequestCallback       callback
+    FNetCliAuthAgeRequestCallback       callback,
+    void *                              param
 );
 
 //============================================================================
@@ -317,24 +358,33 @@ struct NetCliAuthFileInfo {
     char16_t    filename[kNetDefaultStringSize];
     unsigned    filesize;
 };
-using FNetCliAuthFileListRequestCallback = std::function<void(
+typedef void (*FNetCliAuthFileListRequestCallback)(
     ENetError                   result,
-    const std::vector<NetCliAuthFileInfo>& infos
-)>;
+    void *                      param,
+    const NetCliAuthFileInfo    infoArr[],
+    unsigned                    infoCount
+);
 void NetCliAuthFileListRequest (
     const char16_t                      dir[],
     const char16_t                      ext[],
-    FNetCliAuthFileListRequestCallback  callback
+    FNetCliAuthFileListRequestCallback  callback,
+    void *                              param
 );
 
 //============================================================================
 // File Download
 //============================================================================
-using FNetCliAuthFileRequestCallback = std::function<void(ENetError result)>;
+typedef void (*FNetCliAuthFileRequestCallback)(
+    ENetError           result,
+    void *              param,
+    const plFileName &  filename,
+    hsStream *          writer
+);
 void NetCliAuthFileRequest (
     const plFileName &              filename,
     hsStream *                      writer,
-    FNetCliAuthFileRequestCallback  callback
+    FNetCliAuthFileRequestCallback  callback,
+    void *                          param
 );
 
 //============================================================================
@@ -344,98 +394,118 @@ class NetVaultNode;
 struct NetVaultNodeRef;
 
 // VaultNodeChanged
-using FNetCliAuthVaultNodeChanged = std::function<void(
+typedef void (*FNetCliAuthVaultNodeChanged)(
     unsigned        nodeId,
     const plUUID&   revisionId
-)>;
+);
 void NetCliAuthVaultSetRecvNodeChangedHandler (
     FNetCliAuthVaultNodeChanged handler
 );
 // VaultNodeAdded
-using FNetCliAuthVaultNodeAdded = std::function<void(
+typedef void (*FNetCliAuthVaultNodeAdded)(
     unsigned        parentId,
     unsigned        childId,
     unsigned        ownerId
-)>;
+);
 void NetCliAuthVaultSetRecvNodeAddedHandler (
     FNetCliAuthVaultNodeAdded   handler
 );
 // VaultNodeRemoved
-using FNetCliAuthVaultNodeRemoved = std::function<void(
+typedef void (*FNetCliAuthVaultNodeRemoved)(
     unsigned        parentId,
     unsigned        childId
-)>;
+);
 void NetCliAuthVaultSetRecvNodeRemovedHandler (
     FNetCliAuthVaultNodeRemoved handler
 );
 // VaultNodeDeleted
-using FNetCliAuthVaultNodeDeleted = std::function<void(
+typedef void (*FNetCliAuthVaultNodeDeleted)(
     unsigned        nodeId
-)>;
+);
 void NetCliAuthVaultSetRecvNodeDeletedHandler (
     FNetCliAuthVaultNodeDeleted handler
 );
 // VaultNodeAdd
-using FNetCliAuthVaultNodeAddCallback = std::function<void(ENetError result)>;
+typedef void (*FNetCliAuthVaultNodeAddCallback)(
+    ENetError           result,
+    void *              param
+);
 void NetCliAuthVaultNodeAdd (
     unsigned                        parentId,
     unsigned                        childId,
     unsigned                        ownerId,
-    FNetCliAuthVaultNodeAddCallback callback
+    FNetCliAuthVaultNodeAddCallback callback,
+    void *                          param
 );
 // VaultNodeRemove
-using FNetCliAuthVaultNodeRemoveCallback = std::function<void(ENetError result)>;
+typedef void (*FNetCliAuthVaultNodeRemoveCallback)(
+    ENetError           result,
+    void *              param
+);
 void NetCliAuthVaultNodeRemove (
     unsigned                            parentId,
     unsigned                            childId,
-    FNetCliAuthVaultNodeRemoveCallback  callback
+    FNetCliAuthVaultNodeRemoveCallback  callback,
+    void *                              param
 );
 // VaultNodeCreate
-using FNetCliAuthVaultNodeCreated = std::function<void(
+typedef void (*FNetCliAuthVaultNodeCreated)(
     ENetError           result,
+    void *              param,
     unsigned            nodeId
-)>;
+);
 void NetCliAuthVaultNodeCreate (
     NetVaultNode *              templateNode,
-    FNetCliAuthVaultNodeCreated callback
+    FNetCliAuthVaultNodeCreated callback,
+    void *                      param
 );
 // VaultNodeFetch
-using FNetCliAuthVaultNodeFetched = std::function<void(
+typedef void (*FNetCliAuthVaultNodeFetched)(
     ENetError           result,
+    void *              param,
     NetVaultNode *      node
-)>;
+);
 void NetCliAuthVaultNodeFetch (
     unsigned                    nodeId,
-    FNetCliAuthVaultNodeFetched callback
+    FNetCliAuthVaultNodeFetched callback,
+    void *                      param
 );
 // VaultNodeFind
-using FNetCliAuthVaultNodeFind = std::function<void(
+typedef void (*FNetCliAuthVaultNodeFind)(
     ENetError           result,
+    void *              param,
     unsigned            nodeIdCount,
     const unsigned      nodeIds[]
-)>;
+);
 void NetCliAuthVaultNodeFind (
     NetVaultNode *              templateNode,
-    FNetCliAuthVaultNodeFind    callback
+    FNetCliAuthVaultNodeFind    callback,
+    void *                      param
 );
 // VaultNodeSave
-using FNetCliAuthVaultNodeSaveCallback = std::function<void(ENetError result)>;
+typedef void (*FNetCliAuthVaultNodeSaveCallback)(
+    ENetError           result,
+    void *              param
+);
 unsigned NetCliAuthVaultNodeSave (  // returns number of bytes written
     NetVaultNode *                      node,
-    FNetCliAuthVaultNodeSaveCallback    callback
+    FNetCliAuthVaultNodeSaveCallback    callback,
+    void *                              param
 );
 void NetCliAuthVaultNodeDelete (
     unsigned                    nodeId
 );
 // FetchRefs (a vault structure only; no data)
-using FNetCliAuthVaultNodeRefsFetched = std::function<void(
+typedef void (*FNetCliAuthVaultNodeRefsFetched)(
     ENetError           result,
+    void *              param,
     NetVaultNodeRef *   refs,
     unsigned            refCount
-)>;
+);
 void NetCliAuthVaultFetchNodeRefs (
     unsigned                        nodeId,
-    FNetCliAuthVaultNodeRefsFetched callback
+    FNetCliAuthVaultNodeRefsFetched callback,
+    void *                          param
 );
 void NetCliAuthVaultSetSeen (
     unsigned    parentId,
@@ -449,11 +519,12 @@ void NetCliAuthVaultSendNode (
 );
 
 // Initialize an age vault. Will find existing match in db, or create a new age vault structure.
-using FNetCliAuthAgeInitCallback = std::function<void(
+typedef void (*FNetCliAuthAgeInitCallback) (
     ENetError           result,
+    void *              param,
     unsigned            ageVaultId,
     unsigned            ageInfoVaultId
-)>;
+);
 void NetCliAuthVaultInitAge (
     const plUUID&               ageInstId,          // optional. is used in match
     const plUUID&               parentAgeInstId,    // optional. is used in match
@@ -463,7 +534,8 @@ void NetCliAuthVaultInitAge (
     const ST::string&           ageDesc,            // optional. not used in match
     unsigned                    ageSequenceNumber,  // optional. not used in match
     unsigned                    ageLanguage,        // optional. not used in match
-    FNetCliAuthAgeInitCallback  callback
+    FNetCliAuthAgeInitCallback  callback,           // optional
+    void *                      param               // optional
 );
 
 void NetCliAuthLogPythonTraceback (const char16_t traceback[]);
@@ -474,11 +546,15 @@ void NetCliAuthLogClientDebuggerConnect ();
 //============================================================================
 // SetPlayerBanStatusRequest
 //============================================================================
-using FNetCliAuthSetPlayerBanStatusRequestCallback = std::function<void(ENetError result)>;
+typedef void (*FNetCliAuthSetPlayerBanStatusRequestCallback)(
+    ENetError                       result,
+    void *                          param
+);
 void NetCliAuthSetPlayerBanStatusRequest (
     unsigned                                        playerId,
     unsigned                                        banned,
-    FNetCliAuthSetPlayerBanStatusRequestCallback    callback
+    FNetCliAuthSetPlayerBanStatusRequestCallback    callback,
+    void *                                          param
 );
 
 //============================================================================
@@ -491,11 +567,15 @@ void NetCliAuthKickPlayer (
 //============================================================================
 // ChangePlayerNameRequest
 //============================================================================
-using FNetCliAuthChangePlayerNameRequestCallback = std::function<void(ENetError result)>;
+typedef void (*FNetCliAuthChangePlayerNameRequestCallback)(
+    ENetError                       result,
+    void *                          param
+);
 void NetCliAuthChangePlayerNameRequest (
     unsigned                                    playerId,
     const char16_t                              newName[],
-    FNetCliAuthChangePlayerNameRequestCallback  callback
+    FNetCliAuthChangePlayerNameRequestCallback  callback,
+    void *                                      param
 );
 
 //============================================================================
@@ -508,23 +588,27 @@ void NetCliAuthSendCCRPetition (
 //============================================================================
 // SendFriendInvite
 //============================================================================
-using FNetCliAuthSendFriendInviteCallback = std::function<void(ENetError result)>;
+typedef void (*FNetCliAuthSendFriendInviteCallback)(
+    ENetError                           result,
+    void *                              param
+);
 
 void NetCliAuthSendFriendInvite (
     const ST::string&                   emailAddress,
     const ST::string&                   toName,
     const plUUID&                       inviteUuid,
-    FNetCliAuthSendFriendInviteCallback callback
+    FNetCliAuthSendFriendInviteCallback callback,
+    void *                              param
 );
 
 //============================================================================
 // Propagate app-specific data
 //============================================================================
-using FNetCliAuthRecvBufferHandler = std::function<void(
+typedef void (*FNetCliAuthRecvBufferHandler)(
     unsigned                        type,
     unsigned                        bytes,
     const uint8_t                      buffer[]
-)>;
+);
 void NetCliAuthSetRecvBufferHandler (
     FNetCliAuthRecvBufferHandler    handler
 );
@@ -537,7 +621,7 @@ void NetCliAuthPropagateBuffer (
 //============================================================================
 // New build notifications
 //============================================================================
-using FNotifyNewBuildHandler = std::function<void()>;
+typedef void (*FNotifyNewBuildHandler)();
 void NetCliAuthSetNotifyNewBuildHandler (FNotifyNewBuildHandler handler);
 
 //============================================================================
@@ -545,45 +629,59 @@ void NetCliAuthSetNotifyNewBuildHandler (FNotifyNewBuildHandler handler);
 //============================================================================
 struct NetGameScore;
 
-using FNetCliAuthScoreUpdateCallback = std::function<void(ENetError result)>;
+typedef void (*FNetCliAuthScoreUpdateCallback)(
+    ENetError           result,
+    void *              param
+);
 
 //============================================================================
-using FNetCliAuthCreateScoreCallback = std::function<void(
+typedef void (*FNetCliAuthCreateScoreCallback)(
     ENetError       result,
+    void *          param,
     unsigned        scoreId,
-    uint32_t        createdTime
-)>;
+    uint32_t        createdTime,
+    unsigned        ownerId,
+    const ST::string& gameName,
+    unsigned        gameType,
+    int             value
+);
 void NetCliAuthScoreCreate(
     unsigned                        ownerId,
     const ST::string&               gameName,
     unsigned                        gameType,
     int                             value,
-    FNetCliAuthCreateScoreCallback  callback
+    FNetCliAuthCreateScoreCallback  callback,
+    void *                          param
 );
 
 //============================================================================
 void NetCliAuthScoreDelete(
     unsigned                        scoreId,
-    FNetCliAuthScoreUpdateCallback  callback
+    FNetCliAuthScoreUpdateCallback  callback,
+    void *                          param
 );
 
 //============================================================================
-using FNetCliAuthGetScoresCallback = std::function<void(
+typedef void (*FNetCliAuthGetScoresCallback)(
     ENetError           result,
-    const std::vector<NetGameScore>& scores
-)>;
+    void *              param,
+    const NetGameScore  scores[],
+    unsigned            scoreCount
+);
 
 void NetCliAuthScoreGetScores(
     unsigned                        ownerId,
     const ST::string&               gameName,
-    FNetCliAuthGetScoresCallback    callback
+    FNetCliAuthGetScoresCallback    callback,
+    void *                          param
 );
 
 //============================================================================
 void NetCliAuthScoreAddPoints(
     unsigned                        scoreId,
     int                             numPoints,
-    FNetCliAuthScoreUpdateCallback  callback
+    FNetCliAuthScoreUpdateCallback  callback,
+    void *                          param
 );
 
 //============================================================================
@@ -591,23 +689,26 @@ void NetCliAuthScoreTransferPoints(
     unsigned                        srcScoreId,
     unsigned                        destScoreId,
     int                             numPoints,
-    FNetCliAuthScoreUpdateCallback  callback
+    FNetCliAuthScoreUpdateCallback  callback,
+    void *                          param
 );
 
 //============================================================================
 void NetCliAuthScoreSetPoints(
     unsigned                        scoreId,
     int                             numPoints,
-    FNetCliAuthScoreUpdateCallback  callback
+    FNetCliAuthScoreUpdateCallback  callback,
+    void *                          param
 );
 
 //============================================================================
 struct NetGameRank;
-using FNetCliAuthGetRanksCallback = std::function<void(
+typedef void (*FNetCliAuthGetRanksCallback)(
     ENetError           result,
+    void *              param,
     const NetGameRank   ranks[],
     unsigned            rankCount
-)>;
+);
 
 void NetCliAuthScoreGetRankList(
     unsigned                    ownerId,
@@ -618,7 +719,8 @@ void NetCliAuthScoreGetRankList(
     unsigned                    numResults,
     unsigned                    pageNumber,
     bool                        sortDesc,
-    FNetCliAuthGetRanksCallback callback
+    FNetCliAuthGetRanksCallback callback,
+    void *                      param
 );
 
 //============================================================================
@@ -626,5 +728,6 @@ void NetCliAuthScoreGetHighScores(
     unsigned                        ageId,
     unsigned                        maxScores,
     const ST::string&               gameName,
-    FNetCliAuthGetScoresCallback    callback
+    FNetCliAuthGetScoresCallback    callback,
+    void *                          param
 );

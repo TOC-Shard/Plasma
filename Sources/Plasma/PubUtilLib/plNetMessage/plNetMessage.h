@@ -758,14 +758,7 @@ public:
     CLASSNAME_REGISTER( plNetMsgGetSharedState );
     GETINTERFACE_ANY( plNetMsgGetSharedState, plNetMsgObject );
 
-    void SetSharedStateName(char* n)
-    {
-        if (n) {
-            strncpy(fSharedStateName, n, kMaxNameLen - 1);
-            fSharedStateName[kMaxNameLen - 1] = 0;
-        }
-    }
-
+    void SetSharedStateName(char* n) { if (n) hsStrncpy(fSharedStateName, n, kMaxNameLen); }
     char* GetSharedStateName() { return fSharedStateName; }
 };
 

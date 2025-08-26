@@ -125,7 +125,7 @@ NetTrans::NetTrans (ENetProtocol protocol, ETransType transType)
 {
     ++s_perf[kPerfCurrTransactions];
     ++s_perfTransCount[m_transType];
-//  hsDebugPrintToTerminal("%s@%p created", s_transTypes[m_transType], this);
+//  DebugMsg("%s@%p created", s_transTypes[m_transType], this);
 }
 
 //============================================================================
@@ -141,7 +141,7 @@ NetTrans::~NetTrans () {
 #endif
     --s_perfTransCount[m_transType];
     --s_perf[kPerfCurrTransactions];
-//  hsDebugPrintToTerminal("%s@%p destroyed", s_transTypes[m_transType], this);
+//  DebugMsg("%s@%p destroyed", s_transTypes[m_transType], this);
 }
 
 //============================================================================
@@ -153,8 +153,6 @@ bool NetTrans::CanStart () const {
         case kNetProtocolCli2GateKeeper: return GateKeeperQueryConnected();
         DEFAULT_FATAL(m_protocol);
     }
-
-    return false;
 }
 
 

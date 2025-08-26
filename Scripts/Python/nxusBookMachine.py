@@ -1,46 +1,52 @@
-# /*==LICENSE==*
-#
-# CyanWorlds.com Engine - MMOG client, server and tools
-# Copyright (C) 2011  Cyan Worlds, Inc.
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# Additional permissions under GNU GPL version 3 section 7
-#
-# If you modify this Program, or any covered work, by linking or
-# combining it with any of RAD Game Tools Bink SDK, Autodesk 3ds Max SDK,
-# NVIDIA PhysX SDK, Microsoft DirectX SDK, OpenSSL library, Independent
-# JPEG Group JPEG library, Microsoft Windows Media SDK, or Apple QuickTime SDK
-# (or a modified version of those libraries),
-# containing parts covered by the terms of the Bink SDK EULA, 3ds Max EULA,
-# PhysX SDK EULA, DirectX SDK EULA, OpenSSL and SSLeay licenses, IJG
-# JPEG Library README, Windows Media SDK EULA, or QuickTime SDK EULA, the
-# licensors of this Program grant you additional
-# permission to convey the resulting work. Corresponding Source for a
-# non-source form of such a combination shall include the source code for
-# the parts of OpenSSL and IJG JPEG Library used as well as that of the covered
-# work.
-#
-# You can contact Cyan Worlds, Inc. by email legal@cyan.com
-#  or by snail mail at:
-#       Cyan Worlds, Inc.
-#       14617 N Newport Hwy
-#       Mead, WA   99021
-#
-# *==LICENSE==*/
+# -*- coding: utf-8 -*-
+""" *==LICENSE==*
 
-from __future__ import annotations
+CyanWorlds.com Engine - MMOG client, server and tools
+Copyright (C) 2011  Cyan Worlds, Inc.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+Additional permissions under GNU GPL version 3 section 7
+
+If you modify this Program, or any covered work, by linking or
+combining it with any of RAD Game Tools Bink SDK, Autodesk 3ds Max SDK,
+NVIDIA PhysX SDK, Microsoft DirectX SDK, OpenSSL library, Independent
+JPEG Group JPEG library, Microsoft Windows Media SDK, or Apple QuickTime SDK
+(or a modified version of those libraries),
+containing parts covered by the terms of the Bink SDK EULA, 3ds Max EULA,
+PhysX SDK EULA, DirectX SDK EULA, OpenSSL and SSLeay licenses, IJG
+JPEG Library README, Windows Media SDK EULA, or QuickTime SDK EULA, the
+licensors of this Program grant you additional
+permission to convey the resulting work. Corresponding Source for a
+non-source form of such a combination shall include the source code for
+the parts of OpenSSL and IJG JPEG Library used as well as that of the covered
+work.
+
+You can contact Cyan Worlds, Inc. by email legal@cyan.com
+ or by snail mail at:
+      Cyan Worlds, Inc.
+      14617 N Newport Hwy
+      Mead, WA   99021
+
+ *==LICENSE==* """
+"""
+Module: nxusBookMachine
+Age: nexus
+Date: September, 2002
+Author: Bill Slease
+Handler for the nexus book machine.
+"""
 
 from Plasma import *
 from PlasmaKITypes import *
@@ -52,11 +58,8 @@ from xPsnlVaultSDL import *
 import xLocTools
 
 import PlasmaControlKeys
-
 import datetime
 import random
-import re
-from typing import *
 
 # define the attributes that will be entered in max
 NexusGUI = ptAttribGUIDialog(1, "The Nexus GUI")
@@ -75,9 +78,8 @@ respBookRetract = ptAttribResponder(13, "Rspndr: Retract Book") # onInit
 actGetBook = ptAttribActivator(14, "Actvtr: Get Book")
 respGetBook = ptAttribResponder(15, "Rspndr: Get Book")
 respButtonPress = ptAttribResponder(16, "Rspndr: GetBook Btn Press") # onInit
-objlistLinkPanels = ptAttribSceneobjectList(17, "Objct: Link Panels") # Dead
+objlistLinkPanels = ptAttribSceneobjectList(17, "Objct: Link Panels")
 respKISlotGlow = ptAttribResponder(18, "Rspndr: KI Slot Glow")
-layLinkPanel = ptAttribLayer(19, "Layer: Linking Panel")
 
 #------nexus machine GUI tags
 kNexusDialogName = "NexusAgeDialog"
@@ -178,28 +180,32 @@ colorDisabled = AgenGoldDkSoft
 kNumDisplayFields = 8
 kMaxDisplayableChars = 24 # the avg number of chars to display before tacking on an ellipsis: "..."
 
-# Specially named link panel textures
-kLinkPanels: Dict[Tuple[str, str], str] = {
-    ("Ahnonay", "Default"): "xlinkpanelahnonayvortex",
-    ("GreatZero", "Great Zero"): "xlinkpanelgrtzero",
+#special named link panels (other then 'LinkPanel_' + Age Filename)
+kLinkPanels = {
+'city' : {'LinkInPointFerry' : 'LinkPanel_Ferry Terminal',
+        'LinkInPointDakotahAlley' : 'LinkPanel_Dakotah Alley',
+        'LinkInPointPalace' : 'LinkPanel_Palace Alcove',
+        'LinkInPointConcertHallFoyer' : 'LinkPanel_Concert Hall Foyer',
+        'LinkInPointLibrary' : 'LinkPanel_Library Courtyard'
+        },
+'Cleft' : {
+           #That would be conspicious, if Nexus allowed to link to rainy cleft, unless we belive in great Nexus-Maintainers-Bahro conspiracy
+           'SpawnPointTomahna01' : 'LinkPanel_Tomahna',
+           #Umm, why Nexus even has entry for some boring hole in ground on surface?  
+           '' : 'LinkPanel_Cleft',
+          },
+
+'GreatZero' : {'' : 'LinkPanel_Great Zero Observation',
+               'BigRoomLinkInPoint' : 'LinkPanel_GreatZero'
+              },
+'Neighborhood02' : {'' : 'LinkPanel_Kirel'
+                   },
 }
 
-# Special replacements used in some filenames
-kLinkPanelInstances: Dict[str, str] = {
-    "AhnonayCathedral": "ahnonaytemple",
-    "EderTsogal": "tsogarden",
-    "GreatZero": "grtzero",
-    "GuildPub-Cartographers": "guildpubcartographers",
-    "GuildPub-Greeters": "guildpubgreeters",
-    "GuildPub-Maintainers": "guildpubmaintainers",
-    "GuildPub-Messengers": "guildpubmessengers",
-    "GuildPub-Writers": "guildpubwriters",
-    "Neighborhood": "Bevin",
-}
 
-kHiddenPersonalAges = ["Personal", "Nexus", "Neighborhood", "city", "AvatarCustomization", "Cleft", "BaronCityOffice", "BahroCave", "PelletBahroCave", "Kveer", "Myst", "LiveBahroCaves", "LiveBahroCave", "ChisoPreniv", "GoMePubNew"]
+kHiddenPersonalAges = ["Personal", "Nexus", "Neighborhood", "city", "AvatarCustomization", "Cleft", "BaronCityOffice", "BahroCave", "PelletBahroCave", "Kveer", "Myst", "LiveBahroCaves", "LiveBahroCave", "ChisoPreniv", "GoMePubNew", "FahetsHighgarden"]
 kHiddenCityLinks = ["islmPalaceBalcony03", "KadishGallery", "islmPalaceBalcony02", "islmDakotahRoof", "islmGreatTree"]
-kHiddenAgesIfInvited = ["BahroCave", "PelletBahroCave", "Pellet Cave", "LiveBahroCave", "LiveBahroCaves", "Myst", "ChisoPreniv", "GoMePubNew"]
+kHiddenAgesIfInvited = ["BahroCave", "PelletBahroCave", "Pellet Cave", "LiveBahroCave", "LiveBahroCaves", "Myst", "ChisoPreniv", "GoMePubNew", "FahetsHighgarden"]
 
 #public ages SDL variables to be read from Vault on start (max. population, is link visible)
 kAgeSdlVariables = {
@@ -357,8 +363,6 @@ class nxusBookMachine(ptModifier):
             PtLanguage.kGerman : True
         }
 
-        self.defaultPanelImage = None
-
     def OnFirstUpdate(self):
         "First update, load GUI dialog, give player PAL to Nexus"
         PtLoadDialog(kNexusDialogName, self.key, "Nexus")
@@ -368,12 +372,9 @@ class nxusBookMachine(ptModifier):
         respBookRetract.run(self.key, fastforward = 1)
         respButtonPress.run(self.key, fastforward = 1)
 
-        # hide all the linking panels in the machine - they are no longer used
+        # hide all the linking panels in the machine - will draw appropriate when selected
         for objPanel in objlistLinkPanels.value:
             objPanel.draw.disable()
-
-        if layLinkPanel.value is not None:
-            self.defaultPanelImage = layLinkPanel.value.getTexture()
 
     def OnServerInitComplete(self):
         ageSDL = PtGetAgeSDL()
@@ -591,11 +592,11 @@ class nxusBookMachine(ptModifier):
 
     def IPublicAgeCreated(self, ageName):
         PtDebugPrint("IPublicAgeCreated: " + ageName)
-        PtGetPublicAgeList(ageName)
+        PtGetPublicAgeList(ageName, self)
 
     def IPublicAgeRemoved(self, ageName):
         PtDebugPrint("IPublicAgeRemoved: " + ageName)
-        PtGetPublicAgeList(ageName)
+        PtGetPublicAgeList(ageName, self)
 
     def IHoodCreated(self, ageInfo):
         PtDebugPrint("OnVaultNotify: Setting the new hood's language to %d " % PtGetLanguage())
@@ -707,8 +708,8 @@ class nxusBookMachine(ptModifier):
                         ageInfo.setAgeFilename(ageFilename)
                         ageInfo.setAgeInstanceGuid(hardcoded)
                         ageData.instances.append(AgeInstance((ageInfo, 0, 0)))
-                PtGetPublicAgeList(ageFilename)
-            PtGetPublicAgeList('Neighborhood')
+                PtGetPublicAgeList(ageFilename, self)
+            PtGetPublicAgeList('Neighborhood', self)
 
             # set up the camera so when the one shot returns it gets set up right (one shot was fighting with python for camera control)
             virtCam = ptCamera()
@@ -750,7 +751,6 @@ class nxusBookMachine(ptModifier):
         respKISlotReturn.run(self.key)
         self.controlsEnabled = True
         self.animCount = 0
-        self.dialogVisible = False
 
         if self.presentedBookAls is not None:
             self.IBookRetract()
@@ -1217,61 +1217,17 @@ class nxusBookMachine(ptModifier):
         self.IUpdateLinks()
         return
 
-    def IGeneratePotentialLinkPanels(self, als: ptAgeLinkStruct) -> Generator[Iterable[ptImage]]:
-        def gen(name: str) -> Iterable[ptImage]:
-            # Texture names (should) be all lowercase.
-            name = re.sub(r"[ '\"]", "", name.lower())
-            PtDebugPrint(f"nxusBookMachine.IGeneratePotentialLinkPanels: Generating images for {name=}", level=kWarningLevel)
-            return PtFindImage(name)
-
-        info = als.getAgeInfo()
-        filename = info.getAgeFilename()
-        swpt = als.getSpawnPoint()
-        swptTitle = swpt.getTitle()
-
-        if hardcodedName := kLinkPanels.get((filename, swptTitle)):
-            PtDebugPrint(f"IGeneratePotentialLinkPanels: Generated images for hardcoded name {hardcodedName}", level=kWarningLevel)
-            yield PtFindImage(hardcodedName)
-            return
-
-        def gen_by_swpt(name: str, title: str) -> Generator[Iterable[ptImage]]:
-            yield gen(f"xlinkpanel{name}{title}")
-            if title == "Default":
-                yield gen(f"xlinkpanel{name}")
-
-        if ageName := kLinkPanelInstances.get(filename):
-            yield from gen_by_swpt(ageName, swptTitle)
-
-        yield from gen_by_swpt(filename, swptTitle)
-        if swptTitle.lower() != "default":
-            yield gen(f"xlinkpanel{swptTitle}")
-        yield from gen_by_swpt(info.getAgeInstanceName(), swptTitle)
-
     def IDrawLinkPanel(self):
         if self.presentedBookAls is None:
             PtDebugPrint("nxusBookMachine.IDrawLinkPanel: trying to draw panel without selected book!")
-            return
-        if layLinkPanel.value is None:
-            PtDebugPrint("nxusBookMachine.IDrawLinkPanel: trying to draw panel with old PRPs!")
-            return
-
-        # Generate a series of potential link panel image names and search for them,
-        # selecting the first matching panel name.
-        panelGen = self.IGeneratePotentialLinkPanels(self.presentedBookAls)
-        if panelImages := next(filter(None, panelGen), None):
-             # Some Ages will have multiple panels that match our lazy string lookup,
-             # and, in some cases, the first match is a very low resolution postage stamp.
-             # These are probably coming from the in-world texture on the book. So,
-             # sort the list so we can get the biggest and therefore clearest one.
-             panelImages = sorted(
-                 panelImages,
-                 key=lambda x: x.getWidth() * x.getHeight()
-             )
-             PtDebugPrint("nxusBookMachine.IDrawLinkPanel: Drawing link panel!", level=kWarningLevel)
-             layLinkPanel.value.setTexture(panelImages[-1])
         else:
-            PtDebugPrint("nxusBookMachine.IDrawLinkPanel: Drawing default panel for unknown Age")
-            layLinkPanel.value.setTexture(self.defaultPanelImage)
+            panelName = self.IGetLinkPanelName(self.presentedBookAls)
+            PtDebugPrint("drawing link panel: %s" % (panelName))
+            for objPanel in objlistLinkPanels.value:
+                if objPanel.getName() == panelName:
+                    objPanel.draw.enable()
+                else:
+                    objPanel.draw.disable()
 
     def IChoosePublicInstances(self):
         for (ageFilename, entry) in self.publicAges.items():

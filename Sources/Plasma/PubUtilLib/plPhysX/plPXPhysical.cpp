@@ -123,20 +123,6 @@ bool plPXPhysical::IsTrigger() const
 
 // ==========================================================================
 
-void plPXPhysical::SetGroup(int group)
-{
-    fGroup = (plSimDefs::Group)group;
-    IUpdateShapeFlags();
-    ISyncFilterData();
-    if (fActor) {
-        // Invalidate character collision cache for exclude regions changing groups.
-        plPXPhysicalControllerCore::InvalidateCache(fWorldKey);
-        InitProxy();
-    }
-}
-
-// ==========================================================================
-
 void plPXPhysical::IUpdateShapeFlags()
 {
     physx::PxShape* shape;
@@ -283,7 +269,7 @@ bool plPXPhysical::InitActor()
     }
     break;
 
-    DEFAULT_FATAL(fBounds);
+    DEFAULT_FATAL(fBounds)
     }
 
     fActor->userData = new plPXActorData(this);
@@ -735,7 +721,7 @@ plDrawableSpans* plPXPhysical::CreateProxy(hsGMaterial* mat, std::vector<uint32_
         return IGenerateProxy(addTo, idx, shape, geometry, l2w, mat, blended);
     }
 
-    DEFAULT_FATAL(shape->getGeometryType());
+    DEFAULT_FATAL(shape->getGeometryType())
     }
 
     return myDraw;
