@@ -64,6 +64,7 @@ class pyKey;
 class pyPlayer;
 class pyPoint3;
 class pySceneObject;
+namespace ST { class string; }
 
 typedef struct _object PyObject;
 
@@ -263,7 +264,7 @@ public:
 
 
     //
-    // Get Current age information
+    // Get Current age information - DEPRECIATED. Use ptDniInfoSource() object instead.
     //
     /////////////////////////////////////////////////////////////////////////////
     //
@@ -280,6 +281,7 @@ public:
     static ST::string GetPrevAgeName();
     static PyObject* GetPrevAgeInfo();
     // current time in current age
+    static uint32_t GetAgeTime();
     static time_t GetDniTime();
     static time_t ConvertGMTtoDni(time_t time);
     static time_t GetServerTime(); // returns the current server time in GMT
@@ -743,11 +745,11 @@ public:
     //////////////////////////////////////////////////////////////////////////////
     //
     // Function   : GetPublicAgeList
-    // PARAMETERS : ageName
+    // PARAMETERS : ageName, callback object
     //
     // PURPOSE    : Get the list of public ages for the given age name.
     //
-    static void GetPublicAgeList(const ST::string& ageName);
+    static void GetPublicAgeList(const ST::string& ageName, PyObject * cbObject = nullptr);
 
     //////////////////////////////////////////////////////////////////////////////
     //

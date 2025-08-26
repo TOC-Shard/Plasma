@@ -58,6 +58,8 @@ class plFileName;
 class plAgeDescription;
 class plComponentBase;
 
+namespace ST { class string; }
+
 const MCHAR* LocCompGetPage(plComponentBase* comp);
 
 namespace plPageInfoUtils

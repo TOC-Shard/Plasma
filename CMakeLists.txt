@@ -17,9 +17,8 @@ if(POLICY CMP0127)
 endif()
 
 include(CMakeDependentOption)
-include(Dependencies)
 include(FeatureSummary)
-include(MetalShaderSupport)
+include(Dependencies)
 include(VcpkgToolchain)
 
 project(Plasma)
@@ -165,7 +164,6 @@ endif(PLASMA_PIPELINE_GL)
 
 if(PLASMA_PIPELINE_METAL)
     add_definitions(-DPLASMA_PIPELINE_METAL)
-    enable_language(Metal)
 endif(PLASMA_PIPELINE_METAL)
 
 # Allow us to disable certain parts of the build

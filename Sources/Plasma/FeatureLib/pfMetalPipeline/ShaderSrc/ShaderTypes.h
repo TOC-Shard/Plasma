@@ -150,7 +150,6 @@ struct plMetalShaderLightSource
     half4 specular;
     simd::float3 direction;
     simd::float4 spotProps; // (falloff, theta, phi)
-    __fp16 range;
     __fp16 constAtten;
     __fp16 linAtten;
     __fp16 quadAtten;
@@ -195,7 +194,7 @@ struct VertexUniforms
 
     UVOutDescriptor uvTransforms[8];
 #ifdef __METAL_VERSION__
-    float3 sampleLocation(size_t index, thread float3 *texCoords, const float4 cameraSpaceNormal, const float4 camPosition) constant;
+    float3 sampleLocation(size_t index, thread float3 *texCoords, const float4 normal, const float4 camPosition) constant;
     half4 calcFog(float4 camPosition) constant;
 #endif
 };

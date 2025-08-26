@@ -213,7 +213,14 @@ public:
     void GetTransform(hsMatrix44& l2w, hsMatrix44& w2l) override;
 
     int GetGroup() const override { return fGroup; }
-    void SetGroup(int group) override;
+    void SetGroup(int group) override
+    {
+        fGroup = (plSimDefs::Group)group;
+        IUpdateShapeFlags();
+        ISyncFilterData();
+        if (fActor)
+            InitProxy();
+    }
 
     void AddLOSDB(uint16_t flag) override
     {

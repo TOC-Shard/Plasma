@@ -57,6 +57,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 
 class pfKIMsg : public plMessage
 {
+#ifndef KI_CONSTANTS_ONLY
     protected:
 
         uint8_t   fCommand;
@@ -83,6 +84,8 @@ class pfKIMsg : public plMessage
             fDelay = 0.0;
             fValue = 0;
         }
+
+#endif // def KI_CONSTANTS_ONLY
 
     public:
         enum 
@@ -174,9 +177,11 @@ class pfKIMsg : public plMessage
             kNormalKI = 2
         };
 
+#ifndef KI_CONSTANTS_ONLY
+
         pfKIMsg() : plMessage(nullptr, nullptr, nullptr) { SetBCastFlag(kBCastByExactType); IInit(); }
         pfKIMsg(uint8_t command) : plMessage(nullptr, nullptr, nullptr) { SetBCastFlag(kBCastByExactType); IInit(); fCommand = command; }
-        pfKIMsg(const plKey& receiver, uint8_t command) : plMessage(nullptr, receiver, nullptr) { IInit(); fCommand = command; }
+        pfKIMsg(plKey &receiver, uint8_t command) : plMessage(nullptr, nullptr, nullptr) { AddReceiver(receiver); IInit(); fCommand = command; }
 
         CLASSNAME_REGISTER( pfKIMsg );
         GETINTERFACE_ANY( pfKIMsg, plMessage );
@@ -222,6 +227,8 @@ class pfKIMsg : public plMessage
 
         void        SetIntValue( int32_t value ) { fValue = value; }
         int32_t     GetIntValue() { return fValue; }
+
+#endif // def KI_CONSTANTS_ONLY
 };
 
 #endif // _pfKIMsg_h

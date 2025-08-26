@@ -75,9 +75,10 @@ private:
     };
     typedef std::vector<DebugObject*> DebugObjectList;
     DebugObjectList fDebugObjects;
-    plStatusLog* fStatusLog;
+    mutable plStatusLog* fStatusLog;
     bool    fDebugging;
 
+    void ICreateStatusLog() const;
 public:
     plNetObjectDebugger();
     ~plNetObjectDebugger();

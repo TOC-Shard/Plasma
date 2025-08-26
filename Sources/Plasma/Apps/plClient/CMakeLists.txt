@@ -92,7 +92,6 @@ if(WIN32)
 elseif(APPLE)
     list(APPEND plClient_SOURCES
         Mac-Cocoa/main.mm
-        Mac-Cocoa/plMacDisplayHelper.mm
         Mac-Cocoa/NSString+StringTheory.mm
         Mac-Cocoa/PLSKeyboardEventMonitor.mm
         Mac-Cocoa/PLSView.mm
@@ -103,7 +102,6 @@ elseif(APPLE)
     )
     list(APPEND plClient_HEADERS
         Mac-Cocoa/NSString+StringTheory.h
-        Mac-Cocoa/plMacDisplayHelper.h
         Mac-Cocoa/PLSKeyboardEventMonitor.h
         Mac-Cocoa/PLSView.h
         Mac-Cocoa/PLSLoginWindowController.h
@@ -117,6 +115,10 @@ elseif(APPLE)
         Mac-Cocoa/MainMenu.xib
         Mac-Cocoa/PLSLoginWindowController.xib
         Mac-Cocoa/PLSPatcherWindowController.xib
+    )
+    list(APPEND plClient_SHADERTARGETS
+        pfMetalPipelineShadersMSL21
+        pfMetalPipelineShadersMSL23
     )
 else()
     list(APPEND plClient_SOURCES
@@ -157,12 +159,17 @@ if(APPLE)
         XCODE_ATTRIBUTE_ENABLE_HARDENED_RUNTIME "YES"
         XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC "YES"
         XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER org.Huru.UruExplorer
+        XCODE_EMBED_RESOURCES "${plClient_SHADERTARGETS}"
     )
     target_compile_options(plClient PRIVATE -fobjc-arc)
     target_sources(plClient PRIVATE Mac-Cocoa/Assets.xcassets)
     set_source_files_properties(Mac-Cocoa/Assets.xcassets ${RESOURCES} PROPERTIES
          MACOSX_PACKAGE_LOCATION Resources
     )
+    
+    if(${CMAKE_VERSION} VERSION_LESS 3.28)
+        message(FATAL_ERROR "Cannot build Mac client without CMake 3.28")
+    endif()
 
     if(PLASMA_APPLE_DEVELOPMENT_TEAM_ID)
             set_target_properties(plClient PROPERTIES
@@ -170,13 +177,6 @@ if(APPLE)
                 XCODE_ATTRIBUTE_DEVELOPMENT_TEAM ${PLASMA_APPLE_DEVELOPMENT_TEAM_ID}
             )
     endif()
-endif()
-
-if(PLASMA_PIPELINE_METAL)
-    target_embed_metal_shader_libraries(plClient
-        pfMetalPipelineShadersMSL21
-        pfMetalPipelineShadersMSL23
-    )
 endif()
 
 if(PLASMA_BUILD_RESOURCE_DAT)
@@ -243,8 +243,6 @@ target_link_libraries(
         CURL::libcurl
         "$<$<PLATFORM_ID:Darwin>:-framework Cocoa>"
         "$<$<PLATFORM_ID:Darwin>:-framework QuartzCore>"
-        # Only need IOKit when targeting Mac OS X < 10.9
-        "$<$<AND:$<PLATFORM_ID:Darwin>,$<VERSION_LESS:${CMAKE_OSX_DEPLOYMENT_TARGET},10.9>>:-framework IOKit>"
         $<$<PLATFORM_ID:Darwin>:${LibArchive_LIBRARIES}>
 )
 target_include_directories(plClient PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")

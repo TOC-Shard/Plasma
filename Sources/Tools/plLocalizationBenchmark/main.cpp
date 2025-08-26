@@ -45,7 +45,6 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 
 #include "plCmdParser.h"
 #include "plFileSystem.h"
-#include "hsMain.inl"
 
 #include "pfLocalizationMgr/pfLocalizationMgr.h"
 
@@ -62,8 +61,12 @@ static const plCmdArgDef s_cmdLineArgs[] = {
 
 using ClockT = std::chrono::steady_clock;
 
-static int hsMain(std::vector<ST::string> args)
+int main(int argc, char* argv[])
 {
+    std::vector<ST::string> args;
+    for (int i = 0; i < argc; ++i)
+        args.emplace_back(argv[i]);
+
     plCmdParser parser(s_cmdLineArgs, std::size(s_cmdLineArgs));
     parser.Parse(args);
 

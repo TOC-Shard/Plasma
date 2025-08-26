@@ -40,7 +40,6 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 
 *==LICENSE==*/
 #include <string>
-#include <string_theory/format>
 #include <ctime>
 
 #include "plSecureStream.h"
@@ -284,28 +283,29 @@ uint32_t plSecureStream::IRead(uint32_t bytes, void* buffer)
 {
     if (fRef == INVALID_HANDLE_VALUE)
         return 0;
-    size_t numItems = 0;
+    uint32_t numItems = 0;
 #if HS_BUILD_FOR_WIN32
-    DWORD numItemsDword = 0;
-    bool success = ReadFile(fRef, buffer, bytes, &numItemsDword, nullptr);
-    numItems = numItemsDword;
+    bool success = (ReadFile(fRef, buffer, bytes, (LPDWORD)&numItems, nullptr) != 0);
 #elif HS_BUILD_FOR_UNIX
     numItems = fread(buffer, bytes, 1, fRef);
     bool success = numItems != 0;
 #endif
     fPosition += numItems;
-    if (numItems < bytes)
+    if ((unsigned)numItems < bytes)
     {
         if (success)
         {
-            hsAssert(false, ST::format("Hit EOF on Windows read, only read {} out of requested {} bytes", numItems, bytes).c_str());
+            // EOF ocurred
+            char str[128];
+            sprintf(str, "Hit EOF on Windows read, only read %d out of requested %d bytes\n", numItems, bytes);
+            hsDebugMessage(str, 0);
         }
         else
         {
 #if HS_BUILD_FOR_WIN32
-            hsAssert(false, ST::format("Error on Windows read (GetLastError = {})", GetLastError()).c_str());
+            hsDebugMessage("Error on Windows read", GetLastError());
 #else
-            hsAssert(false, ST::format("Error on POSIX read (errno = {})", errno).c_str());
+            hsDebugMessage("Error on POSIX read", errno);
 #endif
         }
     }

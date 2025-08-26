@@ -54,7 +54,6 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #endif
 #include <memory>
 #include <set>
-#include <vector>
 
 #include "hsGeometry3.h"
 #include "pnKeyedObject/hsKeyedObject.h"
@@ -63,20 +62,6 @@ class plAudioEndpointVolume;
 class plEAXListenerMod;
 class plSoftSoundNode;
 class plStatusLog;
-
-class plSoftSound
-{
-public:
-    plKey fSoundKey;
-    float fRank;
-
-    plSoftSound(plKey s)
-        : fSoundKey(std::move(s))
-    {
-    }
-
-    void BootSourceOff() const;
-};
 
 class plAudioSystem : public hsKeyedObject
 {
@@ -125,12 +110,12 @@ protected:
     ALCdevice* fCaptureDevice;
     std::unique_ptr<plAudioEndpointVolume> fCaptureLevel;
 
-    std::vector<plSoftSound> fSoftRegionSounds;
-    std::vector<plSoftSound> fActiveSofts;
+    plSoftSoundNode* fSoftRegionSounds;
+    plSoftSoundNode* fActiveSofts;
     plStatusLog* fDebugActiveSoundDisplay;
 
     static int32_t fMaxNumSounds, fNumSoundsSlop;
-    plKey fCurrDebugSound;
+    plSoftSoundNode* fCurrDebugSound;
 
     hsPoint3 fCurrListenerPos;
     bool fActive, fUsingEAX, fRestartOnDestruct, fWaitingForShutdown;
@@ -152,7 +137,7 @@ protected:
     bool OpenCaptureDevice();
     bool RestartCapture();
 
-    void RegisterSoftSound(plKey soundKey);
+    void RegisterSoftSound(const plKey& soundKey);
     void UnregisterSoftSound(const plKey& soundKey);
     void IUpdateSoftSounds(const hsPoint3& newPosition);
 };

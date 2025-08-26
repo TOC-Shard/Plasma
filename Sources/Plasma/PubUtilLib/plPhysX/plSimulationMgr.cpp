@@ -87,26 +87,18 @@ void plSimulationMgr::Init()
 {
     hsAssert(!gTheInstance, "Initializing the sim when it's already been done");
     gTheInstance = new plSimulationMgr;
-    if (!gTheInstance->fSimulation->Init()) {
-        delete gTheInstance;
+    if (gTheInstance->fSimulation->Init())
+        gTheInstance->RegisterAs(kSimulationMgr_KEY);
+    else
         gTheInstance = nullptr;
-        return;
-    }
-
-    gTheInstance->RegisterAs(kSimulationMgr_KEY);
-
-    plgDispatch::Dispatch()->RegisterForType(plAgeLoadedMsg::Index(), gTheInstance->GetKey());
 }
 
 // when the app is going away completely
 void plSimulationMgr::Shutdown()
 {
     hsAssert(gTheInstance, "Simulation manager missing during shutdown.");
-    if (gTheInstance) {
-        plgDispatch::Dispatch()->UnRegisterForType(plAgeLoadedMsg::Index(), gTheInstance->GetKey());
+    if (gTheInstance)
         gTheInstance->UnRegisterAs(kSimulationMgr_KEY);     // this will destroy the instance
-        gTheInstance = nullptr;
-    }
 }
 
 plSimulationMgr* plSimulationMgr::GetInstance()
@@ -164,11 +156,6 @@ bool plSimulationMgr::MsgReceive(plMessage* msg)
 
         DEFAULT_FATAL(refMsg->fType);
         }
-    }
-
-    if (plAgeLoadedMsg* ageLoadedMsg = plAgeLoadedMsg::ConvertNoRef(msg)) {
-        fSuspended = !ageLoadedMsg->fLoaded;
-        return true;
     }
 
     return hsKeyedObject::MsgReceive(msg);

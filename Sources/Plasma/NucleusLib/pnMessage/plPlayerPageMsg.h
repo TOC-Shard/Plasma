@@ -55,7 +55,10 @@ protected:
 
 public:
     plPlayerPageMsg() : fLocallyOriginated(), fUnload(), fLastOut(), fClientID(-1) { }
-
+    plPlayerPageMsg(const plKey &s, 
+                    const plKey &r, 
+                    const double* t) : fLocallyOriginated(), fUnload(), fLastOut(), fClientID(-1) { }
+    
     CLASSNAME_REGISTER(plPlayerPageMsg);
     GETINTERFACE_ANY(plPlayerPageMsg, plMessage);
 

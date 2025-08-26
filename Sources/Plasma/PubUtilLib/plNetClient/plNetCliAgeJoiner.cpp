@@ -124,6 +124,29 @@ plNCAgeJoiner* plNCAgeJoiner::s_instance = nullptr;
 
 /*****************************************************************************
 *
+*   Local functions
+*
+***/
+
+//============================================================================
+void AgeVaultDownloadCallback (
+    ENetError           result,
+    void *              param
+) {
+    plNCAgeJoiner * joiner = (plNCAgeJoiner *)param;
+    if (IS_NET_ERROR(result)) {
+        joiner->Complete(false, "Failed to download age vault");
+    }
+    else {
+        // vault downloaded. start loading age data
+        plNetApp::StaticDebugMsg("AgeJoiner: Next:kLoadAge (vault downloaded)");
+        joiner->nextOp = plNCAgeJoiner::kLoadAge;
+    }
+}
+
+
+/*****************************************************************************
+*
 *   plNCAgeJoiner
 *
 ***/
@@ -379,16 +402,10 @@ bool plNCAgeJoiner::MsgReceive (plMessage * msg) {
             VaultDownloadNoCallbacks(
                 "AgeJoin",
                 ageVaultId,
-                [this](auto result) {
-                    if (IS_NET_ERROR(result)) {
-                        Complete(false, "Failed to download age vault");
-                    } else {
-                        // vault downloaded. start loading age data
-                        plNetApp::StaticDebugMsg("AgeJoiner: Next:kLoadAge (vault downloaded)");
-                        nextOp = kLoadAge;
-                    }
-                },
-                nullptr
+                AgeVaultDownloadCallback,
+                this,
+                nullptr, // FVaultDownloadProgressCallback
+                this
             );
         }
         else {
@@ -441,13 +458,7 @@ bool plNCAgeJoiner::MsgReceive (plMessage * msg) {
     //========================================================================
     plInitialAgeStateLoadedMsg * stateMsg = plInitialAgeStateLoadedMsg::ConvertNoRef(msg);
     if(stateMsg) {
-        if (plNetObjectDebugger::GetInstance()->GetNumDebugObjects() != 0) {
-            // Log this only if the debugger is actually in use.
-            // Avoids creating a NetObject.log file with only OnServerInitComplete messages
-            // if no objects are added to the debugger (which is the usual case for non-debug builds).
-            plNetObjectDebugger::GetInstance()->LogMsg(ST_LITERAL("OnServerInitComplete"));
-        }
-
+        plNetObjectDebugger::GetInstance()->LogMsg(ST_LITERAL("OnServerInitComplete"));
         nc->SetFlagsBit(plNetClientApp::kLoadingInitialAgeState, false);
 
         const plArmatureMod *avMod = plAvatarMgr::GetInstance()->GetLocalAvatar();

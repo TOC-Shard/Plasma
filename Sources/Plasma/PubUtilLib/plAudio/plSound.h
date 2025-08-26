@@ -73,6 +73,7 @@ class plGraphPlate;
 struct hsMatrix44;
 class plSceneObject;
 class plSoundVolumeApplicator;
+namespace ST { class string; }
 
 // Set this to 1 to do our own distance attenuation (model doesn't work yet tho)
 #define MCN_HACK_OUR_ATTEN  0
@@ -209,7 +210,7 @@ public:
 
     virtual void        Update();
     
-    plSoundBuffer *     GetDataBuffer() const { return fDataBuffer; }
+    plSoundBuffer *     GetDataBuffer() const { return (plSoundBuffer *)fDataBufferKey->ObjectIsLoaded(); }
     float               QueryCurrVolume() const;  // Returns the current volume, attenuated
 
     plFileName          GetFileName() const;

@@ -49,6 +49,13 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "hsStream.h"
 #include "hsResMgr.h"
 
+plImageLibMod::plImageLibMod()
+{
+}
+
+plImageLibMod::~plImageLibMod()
+{
+}
 
 bool plImageLibMod::MsgReceive(plMessage* msg)
 {
@@ -89,24 +96,4 @@ void plImageLibMod::Write(hsStream* stream, hsResMgr* mgr)
     stream->WriteLE32((uint32_t)fImages.size());
     for (plBitmap* image : fImages)
         mgr->WriteKey(stream, image->GetKey());
-}
-
-plBitmap* plImageLibMod::GetImage(const ST::string& imageName) const
-{
-    auto findIt = std::find_if(fImages.begin(), fImages.end(), [&imageName](plBitmap* x) { return x->GetKeyName() == imageName; });
-    if (findIt != fImages.end())
-        return *findIt;
-    return nullptr;
-}
-
-std::vector<ST::string> plImageLibMod::GetImageNames() const
-{
-    std::vector<ST::string> names;
-    names.reserve(fImages.size());
-
-    for (const auto& image : fImages) {
-        if (image)
-            names.emplace_back(image->GetKeyName());
-    }
-    return names;
 }

@@ -78,7 +78,6 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "plWinDpi/plWinDpi.h"
 
 #include "pfConsoleCore/pfConsoleEngine.h"
-#include "pfConsoleCore/pfServerIni.h"
 #include "pfCrashHandler/plCrashCli.h"
 #include "pfPasswordStore/pfPasswordStore.h"
 
@@ -473,11 +472,25 @@ void DeInitNetClientComm()
 // For error logging
 //
 static plStatusLog* s_DebugLog = nullptr;
+static void _DebugMessageProc(const char* msg)
+{
+#if defined(HS_DEBUGGING) || !defined(PLASMA_EXTERNAL_RELEASE)
+    s_DebugLog->AddLine(plStatusLog::kRed, msg);
+#endif // defined(HS_DEBUGGING) || !defined(PLASMA_EXTERNAL_RELEASE)
+}
 
 static void _StatusMessageProc(const char* msg)
 {
 #if defined(HS_DEBUGGING) || !defined(PLASMA_EXTERNAL_RELEASE)
     s_DebugLog->AddLine(msg);
+#endif // defined(HS_DEBUGGING) || !defined(PLASMA_EXTERNAL_RELEASE)
+}
+
+template<typename... _Args>
+static void DebugMsg(const char* format, _Args&&... args)
+{
+#if defined(HS_DEBUGGING) || !defined(PLASMA_EXTERNAL_RELEASE)
+    s_DebugLog->AddLineF(plStatusLog::kYellow, format, std::forward<_Args>(args)...);
 #endif // defined(HS_DEBUGGING) || !defined(PLASMA_EXTERNAL_RELEASE)
 }
 
@@ -487,6 +500,7 @@ static void DebugInit()
     plStatusLogMgr& mgr = plStatusLogMgr::GetInstance();
     s_DebugLog = mgr.CreateStatusLog(30, "plasmadbg.log", plStatusLog::kFilledBackground |
                  plStatusLog::kDeleteForMe | plStatusLog::kAlignToTop | plStatusLog::kTimestamp);
+    hsSetDebugMessageProc(_DebugMessageProc);
     hsSetStatusMessageProc(_StatusMessageProc);
 #endif // defined(HS_DEBUGGING) || !defined(PLASMA_EXTERNAL_RELEASE)
 }
@@ -1187,20 +1201,16 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmdLine, int nC
     }
 #endif
 
-    // Redirect hsStatusMessage to plasmadbg.log
+    // Set up to log errors by using hsDebugMessage
     DebugInit();
-    hsStatusMessage(ST::format("Plasma 2.0.{}.{} - {}", PLASMA2_MAJOR_VERSION, PLASMA2_MINOR_VERSION, plProduct::ProductString()).c_str());
+    DebugMsg("Plasma 2.0.{}.{} - {}", PLASMA2_MAJOR_VERSION, PLASMA2_MINOR_VERSION, plProduct::ProductString());
 
     FILE *serverIniFile = plFileSystem::Open(serverIni, "rb");
     if (serverIniFile)
     {
         fclose(serverIniFile);
-        try {
-            pfServerIni::Load(serverIni);
-        } catch (const pfServerIniParseException& exc) {
-            hsMessageBox(ST::format("Error in server.ini file. Please check your URU installation.\n{}", exc.what()), ST_LITERAL("Error"), hsMessageBoxNormal);
-            return PARABLE_NORMAL_EXIT;
-        }
+        pfConsoleEngine tempConsole;
+        tempConsole.ExecuteFile(serverIni);
     }
     else
     {

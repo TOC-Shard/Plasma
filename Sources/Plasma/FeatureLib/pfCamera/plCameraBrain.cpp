@@ -1169,14 +1169,15 @@ bool plCameraBrain1_Avatar::MsgReceive(plMessage* msg)
             fObstacle = nullptr;
         return true;
     }
-    plControlEventMsg* pCMsg = plControlEventMsg::ConvertNoRef(msg);
-    if (pCMsg)
+    plMouseEventMsg* pMouseMsg = plMouseEventMsg::ConvertNoRef(msg);
+    if( pMouseMsg )
     {
-        if (pCMsg->GetControlCode() == B_CAMERA_ADJUST_OFFSET) {
+        if (pMouseMsg->GetButton() == kWheelPos || pMouseMsg->GetButton() == kWheelNeg)
+        {
             if (fFlags.IsBitSet(kFalling))
                 return true;
-
-            fOffsetPct += -1 * ((pCMsg->GetPct() / 24) * 0.01f);
+        
+            fOffsetPct += -1 * ( (pMouseMsg->GetWheelDelta() / 24) * 0.01f);
             if (fOffsetPct > 1.0f)
                 fOffsetPct = 1.0f;
             else
@@ -1317,6 +1318,14 @@ bool plCameraBrain1_FirstPerson::MsgReceive(plMessage* msg)
                 fPosNode = nullptr;
                 SetSubject(nullptr);
             }
+            return true;
+        }
+    }
+    plMouseEventMsg* pMouseMsg = plMouseEventMsg::ConvertNoRef(msg);
+    if( pMouseMsg )
+    {
+        if (pMouseMsg->GetButton() == kWheelPos || pMouseMsg->GetButton() == kWheelNeg)
+        {
             return true;
         }
     }

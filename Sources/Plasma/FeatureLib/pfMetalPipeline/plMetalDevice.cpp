@@ -124,45 +124,22 @@ static inline uint8_t* inlStuff(uint8_t* dst, const T* val)
     return reinterpret_cast<uint8_t*>(ptr);
 }
 
+matrix_float4x4* hsMatrix2SIMD(const hsMatrix44& src, matrix_float4x4* dst)
+{
+    constexpr auto matrixSize = sizeof(matrix_float4x4);
+    if (src.fFlags & hsMatrix44::kIsIdent) {
+        memcpy(dst, &matrix_identity_float4x4, matrixSize);
+    } else {
+        memcpy(dst, &src.fMap, matrixSize);
+    }
+
+    return dst;
+}
+
 bool plMetalDevice::InitDevice()
 {
-    fCommandQueue = fMetalDevice->newCommandQueue();
-
-    // Only known tiler on Apple devices are Apple GPUs.
-    // Apple recommends a family check for tile memory support.
-    fSupportsTileMemory = fMetalDevice->supportsFamily(MTL::GPUFamilyApple1);
-
-    // set up all the depth stencil states
-    MTL::DepthStencilDescriptor* depthDescriptor = MTL::DepthStencilDescriptor::alloc()->init();
-
-    depthDescriptor->setDepthCompareFunction(MTL::CompareFunctionAlways);
-    depthDescriptor->setDepthWriteEnabled(true);
-    depthDescriptor->setLabel(NS::String::string("No Z Read", NS::UTF8StringEncoding));
-    fNoZReadStencilState = fMetalDevice->newDepthStencilState(depthDescriptor);
-
-    depthDescriptor->setDepthCompareFunction(MTL::CompareFunctionLessEqual);
-    depthDescriptor->setDepthWriteEnabled(false);
-    depthDescriptor->setLabel(NS::String::string("No Z Write", NS::UTF8StringEncoding));
-    fNoZWriteStencilState = fMetalDevice->newDepthStencilState(depthDescriptor);
-
-    depthDescriptor->setDepthCompareFunction(MTL::CompareFunctionAlways);
-    depthDescriptor->setDepthWriteEnabled(false);
-    depthDescriptor->setLabel(NS::String::string("No Z Read or Write", NS::UTF8StringEncoding));
-    fNoZReadOrWriteStencilState = fMetalDevice->newDepthStencilState(depthDescriptor);
-
-    depthDescriptor->setDepthCompareFunction(MTL::CompareFunctionLessEqual);
-    depthDescriptor->setLabel(NS::String::string("Z Read and Write", NS::UTF8StringEncoding));
-    depthDescriptor->setDepthWriteEnabled(true);
-    fDefaultStencilState = fMetalDevice->newDepthStencilState(depthDescriptor);
-
-    depthDescriptor->setDepthCompareFunction(MTL::CompareFunctionGreaterEqual);
-    depthDescriptor->setLabel(NS::String::string("Reverse Z", NS::UTF8StringEncoding));
-    depthDescriptor->setDepthWriteEnabled(true);
-    fReverseZStencilState = fMetalDevice->newDepthStencilState(depthDescriptor);
-
-    depthDescriptor->release();
-
-    LoadLibrary();
+    // FIXME: Should Metal adopt InitDevice like OGL?
+    hsAssert(0, "InitDevice not implemented for Metal rendering");
 }
 
 void plMetalDevice::Shutdown()
@@ -475,6 +452,45 @@ plMetalDevice::plMetalDevice()
     fClearRenderTargetColor = {0.0, 0.0, 0.0, 1.0};
     fClearDrawableColor = {0.0, 0.0, 0.0, 1.0};
     fSamplerStates[0] = nullptr;
+
+    fMetalDevice = MTL::CreateSystemDefaultDevice();
+    fCommandQueue = fMetalDevice->newCommandQueue();
+    
+    // Only known tiler on Apple devices are Apple GPUs.
+    // Apple recommends a family check for tile memory support.
+    fSupportsTileMemory = fMetalDevice->supportsFamily(MTL::GPUFamilyApple1);
+
+    // set up all the depth stencil states
+    MTL::DepthStencilDescriptor* depthDescriptor = MTL::DepthStencilDescriptor::alloc()->init();
+
+    depthDescriptor->setDepthCompareFunction(MTL::CompareFunctionAlways);
+    depthDescriptor->setDepthWriteEnabled(true);
+    depthDescriptor->setLabel(NS::String::string("No Z Read", NS::UTF8StringEncoding));
+    fNoZReadStencilState = fMetalDevice->newDepthStencilState(depthDescriptor);
+
+    depthDescriptor->setDepthCompareFunction(MTL::CompareFunctionLessEqual);
+    depthDescriptor->setDepthWriteEnabled(false);
+    depthDescriptor->setLabel(NS::String::string("No Z Write", NS::UTF8StringEncoding));
+    fNoZWriteStencilState = fMetalDevice->newDepthStencilState(depthDescriptor);
+
+    depthDescriptor->setDepthCompareFunction(MTL::CompareFunctionAlways);
+    depthDescriptor->setDepthWriteEnabled(false);
+    depthDescriptor->setLabel(NS::String::string("No Z Read or Write", NS::UTF8StringEncoding));
+    fNoZReadOrWriteStencilState = fMetalDevice->newDepthStencilState(depthDescriptor);
+
+    depthDescriptor->setDepthCompareFunction(MTL::CompareFunctionLessEqual);
+    depthDescriptor->setLabel(NS::String::string("Z Read and Write", NS::UTF8StringEncoding));
+    depthDescriptor->setDepthWriteEnabled(true);
+    fDefaultStencilState = fMetalDevice->newDepthStencilState(depthDescriptor);
+
+    depthDescriptor->setDepthCompareFunction(MTL::CompareFunctionGreaterEqual);
+    depthDescriptor->setLabel(NS::String::string("Reverse Z", NS::UTF8StringEncoding));
+    depthDescriptor->setDepthWriteEnabled(true);
+    fReverseZStencilState = fMetalDevice->newDepthStencilState(depthDescriptor);
+
+    depthDescriptor->release();
+    
+    LoadLibrary();
 }
 
 void plMetalDevice::SetViewport()
@@ -579,7 +595,7 @@ void plMetalDevice::FillVertexBufferRef(VertexBufferRef* ref, plGBufferGroup* gr
         return;
     }
 
-    MTL::Buffer* metalBuffer = fMetalDevice->newBuffer(size, GetDefaultStorageMode());
+    MTL::Buffer* metalBuffer = fMetalDevice->newBuffer(size, MTL::StorageModeManaged);
     ref->SetBuffer(metalBuffer);
     uint8_t* buffer = (uint8_t*)ref->GetBuffer()->contents();
 
@@ -706,15 +722,13 @@ void plMetalDevice::FillIndexBufferRef(plMetalDevice::IndexBufferRef* iRef, plGB
     iRef->PrepareForWrite();
     MTL::Buffer* indexBuffer = iRef->GetBuffer();
     if (!indexBuffer || indexBuffer->length() < fullSize) {
-        indexBuffer = fMetalDevice->newBuffer(fullSize, GetDefaultStorageMode());
+        indexBuffer = fMetalDevice->newBuffer(fullSize, MTL::ResourceStorageModeManaged);
         iRef->SetBuffer(indexBuffer);
         indexBuffer->release();
     }
 
     memcpy(((uint16_t*)indexBuffer->contents()) + startIdx, owner->GetIndexBufferData(idx) + startIdx, size);
-    if (indexBuffer->storageMode() == MTL::StorageModeManaged) {
-        indexBuffer->didModifyRange(NS::Range(startIdx, size));
-    }
+    indexBuffer->didModifyRange(NS::Range(startIdx, size));
 
     iRef->SetDirty(false);
 }
@@ -921,7 +935,7 @@ void plMetalDevice::MakeTextureRef(plMetalDevice::TextureRef* tRef, plMipmap* im
         descriptor->setMipmapLevelCount(tRef->fLevels + 1);
     }
 
-    descriptor->setStorageMode(GetDefaultStorageMode());
+    descriptor->setStorageMode(MTL::StorageModeManaged);
 
     tRef->fTexture = fMetalDevice->newTexture(descriptor);
     PopulateTexture(tRef, img, 0);
@@ -958,7 +972,7 @@ void plMetalDevice::MakeCubicTextureRef(plMetalDevice::TextureRef* tRef, plCubic
 
 void plMetalDevice::SetProjectionMatrix(const hsMatrix44& src)
 {
-    fMatrixProj = hsMatrix2SIMD(src);
+    hsMatrix2SIMD(src, &fMatrixProj);
 }
 
 void plMetalDevice::SetWorldToCameraMatrix(const hsMatrix44& src)
@@ -966,8 +980,8 @@ void plMetalDevice::SetWorldToCameraMatrix(const hsMatrix44& src)
     hsMatrix44 inv;
     src.GetInverse(&inv);
 
-    fMatrixW2C = hsMatrix2SIMD(src);
-    fMatrixC2W = hsMatrix2SIMD(inv);
+    hsMatrix2SIMD(src, &fMatrixW2C);
+    hsMatrix2SIMD(inv, &fMatrixC2W);
 }
 
 void plMetalDevice::SetLocalToWorldMatrix(const hsMatrix44& src)
@@ -975,8 +989,8 @@ void plMetalDevice::SetLocalToWorldMatrix(const hsMatrix44& src)
     hsMatrix44 inv;
     src.GetInverse(&inv);
 
-    fMatrixL2W = hsMatrix2SIMD(src);
-    fMatrixW2L = hsMatrix2SIMD(inv);
+    hsMatrix2SIMD(src, &fMatrixL2W);
+    hsMatrix2SIMD(inv, &fMatrixW2L);
 }
 
 void plMetalDevice::CreateNewCommandBuffer(CA::MetalDrawable* drawable)

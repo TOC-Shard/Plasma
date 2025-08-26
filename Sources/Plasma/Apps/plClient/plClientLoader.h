@@ -48,7 +48,7 @@ class plClientLoader : private hsThread
 {
     class plClient* fClient;
     hsWindowHndl fWindow;
-    hsDisplayHndl fDisplay;
+    hsWindowHndl fDisplay;
     uint32_t fDevType;
 
     void OnQuit() override
@@ -85,7 +85,7 @@ public:
     /**
      * Sets the client display handle.
      */
-    void SetClientDisplay(hsDisplayHndl hDC) { fDisplay = hDC; }
+    void SetClientDisplay(hsWindowHndl hDC) { fDisplay = hDC; }
 
     /**
      * Sets the preferred rendering backend for the client pipeline.

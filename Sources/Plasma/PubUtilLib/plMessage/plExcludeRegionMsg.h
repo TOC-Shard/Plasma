@@ -60,6 +60,7 @@ protected:
 
 public:
     plExcludeRegionMsg() : fCmd(kClear), fSynchFlags(0) {}
+    plExcludeRegionMsg(const plKey &s, const plKey &r, const double* t) : fCmd(kClear), fSynchFlags(0) {}
     ~plExcludeRegionMsg() {}
 
     CLASSNAME_REGISTER(plExcludeRegionMsg);

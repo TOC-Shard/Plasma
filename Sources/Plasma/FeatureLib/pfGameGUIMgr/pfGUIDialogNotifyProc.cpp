@@ -105,12 +105,6 @@ void pfGUIDialogNotifyProc::HandleExtendedEvent( pfGUIControlMod *ctrl, uint32_t
         if (event == pfGUIMultiLineEditCtrl::kLinkClicked)
             ISendNotify(ctrl->GetKey(), pfGUINotifyMsg::kAction);
     }
-
-    pfGUIButtonMod* button = pfGUIButtonMod::ConvertNoRef(ctrl);
-    if (button) {
-        if (event == pfGUIButtonMod::kDoubleClick)
-            ISendNotify(ctrl->GetKey(), pfGUINotifyMsg::kSpecialAction);
-    }
 }
 
 void pfGUIDialogNotifyProc::OnInit()

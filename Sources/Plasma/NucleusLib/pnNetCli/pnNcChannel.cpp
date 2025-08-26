@@ -239,7 +239,7 @@ const NetMsgInitSend * NetMsgChannelFindSendMessage (
 
     // Is message defined?
     const NetMsgInitSend * sendMsg = &channel->m_sendMsgs[messageId];
-    hsAssert(sendMsg->msg->count, "NetMsg not found for send");
+    ASSERTMSG(sendMsg->msg->count, "NetMsg not found for send");
 
     return sendMsg;
 }
@@ -278,15 +278,11 @@ NetMsgChannel* NetMsgChannelCreate(
     uint32_t                sendMsgCount,
     const NetMsgInitRecv    recvMsgs[],
     uint32_t                recvMsgCount,
-    NetDhConstants          dhConstants
+    uint32_t                dh_g,
+    const plBigNum&         dh_x,
+    const plBigNum&         dh_n
 ) {
-    plBigNum dh_x;
-    dh_x.FromData_BE(sizeof(dhConstants.x), dhConstants.x);
-
-    plBigNum dh_n;
-    dh_n.FromData_BE(sizeof(dhConstants.n), dhConstants.n);
-
-    NetMsgChannel* channel = new NetMsgChannel(protocol, dhConstants.g, dh_x, dh_n);
+    NetMsgChannel* channel = new NetMsgChannel(protocol, dh_g, dh_x, dh_n);
 
     if (sendMsgCount) {
         AddSendMsgs(channel, sendMsgs, sendMsgCount);

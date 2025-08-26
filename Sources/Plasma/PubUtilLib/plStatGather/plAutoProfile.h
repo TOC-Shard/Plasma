@@ -44,6 +44,8 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 
 #include "pnKeyedObject/hsKeyedObject.h"
 
+namespace ST { class string; }
+
 class plAutoProfile : public hsKeyedObject
 {
 public:
