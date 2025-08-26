@@ -69,6 +69,8 @@ public:
         hsG3DDeviceSelector::AddDeviceEnumerator(&plMetalEnumerate::Enumerate);
     }
 
+    static MTL::Device* DeviceForDisplay(hsDisplayHndl display);
+
 private:
     static void Enumerate(std::vector<hsG3DDeviceRecord>& records);
 };
@@ -101,7 +103,7 @@ protected:
     plMetalRenderTargetRef*   fRenderTargetRefList;
 
 public:
-    plMetalPipeline(hsWindowHndl display, hsWindowHndl window, const hsG3DDeviceModeRecord* devMode);
+    plMetalPipeline(hsDisplayHndl display, hsWindowHndl window, const hsG3DDeviceModeRecord* devMode);
     ~plMetalPipeline();
 
     CLASSNAME_REGISTER(plMetalPipeline);
@@ -232,8 +234,7 @@ private:
     hsGDeviceRef*          SharedRenderTargetRef(plRenderTarget* share, plRenderTarget* owner);
     void                   IRenderShadowsOntoSpan(const plRenderPrimFunc& render, const plSpan* span, hsGMaterial* mat, plMetalVertexBufferRef* vRef);
     void                   ISetupShadowRcvTextureStages(hsGMaterial* mat);
-    void                   ISetupShadowSlaveTextures(plShadowSlave* slave);
-    void                   ISetShadowLightState(hsGMaterial* mat);
+    void                   ISetupShadowSlaveTextures(plShadowSlave* slave); 
     void                   ISetupShadowState(plShadowSlave* slave, plShadowState& shadowState);
     void                   IDisableLightsForShadow();
     void                   IReleaseRenderTargetPools();
