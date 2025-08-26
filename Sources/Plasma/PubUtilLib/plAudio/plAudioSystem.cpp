@@ -88,14 +88,76 @@ plProfile_CreateTimer("Soft Update", "Sound", SoundSoftUpdate);
 plProfile_CreateCounter("Max Sounds", "Sound", SoundMaxNum);
 plProfile_CreateTimer("AudioUpdate", "RenderSetup", AudioUpdate);
 
-//// Internal plSoftSound Methods Definition //////////////////////////////////////////////
-
-void plSoftSound::BootSourceOff() const
+//// Internal plSoftSoundNode Class Definition ///////////////////////////////
+class plSoftSoundNode
 {
-    plSound* sound = (plSound*)fSoundKey->ObjectIsLoaded();
-    if (sound)
-        sound->ForceUnregisterFromAudioSys();
-}
+    public:
+        const plKey fSoundKey;
+        float fRank;
+
+        plSoftSoundNode* fNext;
+        plSoftSoundNode** fPrev;
+
+        plSoftSoundNode* fSortNext;
+        plSoftSoundNode** fSortPrev;
+
+        plSoftSoundNode(const plKey& s)
+            : fSoundKey(s), fNext(), fPrev(), fSortNext(), fSortPrev()
+        { }
+        ~plSoftSoundNode() { Unlink(); }
+
+        void Link(plSoftSoundNode** prev)
+        {
+            fNext = *prev;
+            fPrev = prev;
+            if (fNext)
+                fNext->fPrev = &fNext;
+            *prev = this;
+        }
+
+        void Unlink()
+        {
+            if (fPrev) {
+                *fPrev = fNext;
+                if (fNext)
+                    fNext->fPrev = fPrev;
+                fPrev = nullptr;
+                fNext = nullptr;
+            }
+        }
+
+        void SortedLink(plSoftSoundNode** prev, float rank)
+        {
+            fRank = rank;
+
+            fSortNext = *prev;
+            fSortPrev = prev;
+            if (fSortNext)
+                fSortNext->fSortPrev = &fSortNext;
+            *prev = this;
+        }
+
+        // Larger values are first in the list
+        void AddToSortedLink(plSoftSoundNode* toAdd, float rank)
+        {
+            if (fRank > rank) {
+                if (fSortNext)
+                    fSortNext->AddToSortedLink(toAdd, rank);
+                else
+                    toAdd->SortedLink(&fSortNext, rank);
+            } else {
+                // Cute trick here...
+                toAdd->SortedLink(fSortPrev, rank);
+            }
+        }
+
+        void BootSourceOff()
+        {
+            plSound* sound = plSound::ConvertNoRef(fSoundKey->ObjectIsLoaded());
+            if (sound)
+                sound->ForceUnregisterFromAudioSys();
+        }
+};
 
 // plAudioSystem //////////////////////////////////////////////////////////////////////////
 
@@ -109,6 +171,9 @@ plAudioSystem::plAudioSystem()
       fCaptureLevel(plAudioEndpointVolume::Create()),
       fStartTime(),
       fListenerInit(),
+      fSoftRegionSounds(),
+      fActiveSofts(),
+      fCurrDebugSound(),
       fDebugActiveSoundDisplay(),
       fUsingEAX(),
       fRestartOnDestruct(),
@@ -297,12 +362,14 @@ void plAudioSystem::Shutdown()
     fDebugActiveSoundDisplay = nullptr;
 
     // Unregister soft sounds
-    for (const auto& i : fSoftRegionSounds)
-        i.BootSourceOff();
-    for (const auto& i : fActiveSofts)
-        i.BootSourceOff();
-    fSoftRegionSounds.clear();
-    fActiveSofts.clear();
+    while (fSoftRegionSounds) {
+        fSoftRegionSounds->BootSourceOff();
+        delete fSoftRegionSounds;
+    }
+    while (fActiveSofts) {
+        fActiveSofts->BootSourceOff();
+        delete fActiveSofts;
+    }
 
     for (auto rgn : fEAXRegions)
         GetKey()->Release(rgn->GetKey());
@@ -418,9 +485,10 @@ void    plAudioSystem::SetActive(bool b)
 //  least all the calc code is in one place. Possible optimization in the
 //  future: when calling IUpdate(), any sounds that are already active don't
 //  need to be recalced, just resorted.
-void    plAudioSystem::RegisterSoftSound(plKey soundKey)
+void    plAudioSystem::RegisterSoftSound(const plKey& soundKey)
 {
-    fSoftRegionSounds.emplace_back(std::move(soundKey));
+    plSoftSoundNode *node = new plSoftSoundNode(soundKey);
+    node->Link(&fSoftRegionSounds);
 
     fCurrDebugSound = nullptr;
     plSound::SetCurrDebugPlate(nullptr);
@@ -430,20 +498,18 @@ void    plAudioSystem::RegisterSoftSound(plKey soundKey)
 
 void    plAudioSystem::UnregisterSoftSound(const plKey& soundKey)
 {
-    auto findSoft = [&soundKey](const plSoftSound& val) -> bool {
-        return val.fSoundKey == soundKey;
-    };
-
-    auto soundIt = std::find_if(fActiveSofts.begin(), fActiveSofts.end(), findSoft);
-    if (soundIt != fActiveSofts.end()) {
-        fActiveSofts.erase(soundIt);
-        return;
+    for (plSoftSoundNode* node = fActiveSofts; node; node = node->fNext ) {
+        if (node->fSoundKey == soundKey) {
+            delete node;
+            return;
+        }
     }
 
-    soundIt = std::find_if(fSoftRegionSounds.begin(), fSoftRegionSounds.end(), findSoft);
-    if (soundIt != fSoftRegionSounds.end()) {
-        fSoftRegionSounds.erase(soundIt);
-        return;
+    for (plSoftSoundNode* node = fSoftRegionSounds; node; node = node->fNext) {
+        if( node->fSoundKey == soundKey ) {
+            delete node;
+            return;
+        }
     }
 
     // We might have unregistered it ourselves on destruction, so don't bother
@@ -481,15 +547,17 @@ void    plAudioSystem::UnregisterSoftSound(const plKey& soundKey)
 
 void    plAudioSystem::IUpdateSoftSounds(const hsPoint3 &newPosition)
 {
+    plSoftSoundNode* myNode;
     float distSquared, rank;
+    plSoftSoundNode *sortedList = nullptr;
     int32_t i;
 
     plProfile_BeginTiming(SoundSoftUpdate);
 
     // Check the sounds the listener is already inside of. If we moved out, stop sound, else
     // just change attenuation
-    for (auto soundIt = fActiveSofts.begin(); soundIt != fActiveSofts.end(); /* do nothing */) {
-        plSound* sound = (plSound*)soundIt->fSoundKey->ObjectIsLoaded();
+    for (plSoftSoundNode* node = fActiveSofts; node; ) {
+        plSound* sound = plSound::ConvertNoRef( node->fSoundKey->ObjectIsLoaded() );
 
         bool notActive = false;
         if (sound)
@@ -498,32 +566,38 @@ void    plAudioSystem::IUpdateSoftSounds(const hsPoint3 &newPosition)
         // Quick checks for not-active
         if (!sound)
             notActive = true;
-        else if (!sound->IsWithinRange(newPosition, &distSquared))
+        else if(!sound->IsWithinRange(newPosition, &distSquared))
             notActive = true;
         else if (sound->GetPriority() > plgAudioSys::GetPriorityCutoff())
             notActive = true;
 
-        if (plgAudioSys::fMutedStateChange)
+        if(plgAudioSys::fMutedStateChange)
             sound->SetMuted(plgAudioSys::fMuted);
 
         if (!notActive) {
             // Our initial guess is that it's enabled...
-            sound->CalcSoftVolume(true, distSquared);
+            sound->CalcSoftVolume( true, distSquared );
             rank = sound->GetVolumeRank();
             if (rank <= 0.f) {
                 notActive = true;
             } else {
-                // Recalculate the rank for sorting
-                soundIt->fRank = (10.0f - sound->GetPriority()) * rank;
-                soundIt++;
+                // Queue up in our sorted list...
+                if (!sortedList)
+                    node->SortedLink(&sortedList, (10.0f - sound->GetPriority()) * rank);
+                else
+                    sortedList->AddToSortedLink(node, (10.0f - sound->GetPriority()) * rank);
+                // Still in radius, so consider it still "active".
+                node = node->fNext;
             }
         }
 
         if (notActive) {
             // Moved out of range of the sound--stop the sound entirely and move it to our
             // yeah-they're-registered-but-not-active list
-            fSoftRegionSounds.emplace_back(std::move(*soundIt));
-            soundIt = fActiveSofts.erase(soundIt);
+            myNode = node;
+            node = node->fNext;
+            myNode->Unlink();
+            myNode->Link(&fSoftRegionSounds);
 
             // We know this sound won't be enabled, so skip the Calc() call
             if (sound)
@@ -532,15 +606,15 @@ void    plAudioSystem::IUpdateSoftSounds(const hsPoint3 &newPosition)
     }
 
     // Now check remaining sounds to see if the listener moved into them
-    for (auto soundIt = fSoftRegionSounds.begin(); soundIt != fSoftRegionSounds.end(); /* do nothing */) {
+    for (plSoftSoundNode* node = fSoftRegionSounds; node;) {
         if (!fListenerInit) {
-            soundIt++;
+            node = node->fNext;
             continue;
         }
 
-        plSound* sound = (plSound*)soundIt->fSoundKey->ObjectIsLoaded();
-        if (!sound || sound->GetPriority() > plgAudioSys::GetPriorityCutoff()) {
-            soundIt++;
+        plSound* sound = plSound::ConvertNoRef(node->fSoundKey->ObjectIsLoaded());
+        if(!sound || sound->GetPriority() > plgAudioSys::GetPriorityCutoff()) {
+            node = node->fNext;
             continue;
         }
 
@@ -555,33 +629,31 @@ void    plAudioSystem::IUpdateSoftSounds(const hsPoint3 &newPosition)
 
             if (rank > 0.f) {
                 // We just moved into its range, so move it to our active list and start the sucker
-                soundIt->fRank = (10.0f - sound->GetPriority()) * rank;
-                fActiveSofts.emplace_back(std::move(*soundIt));
-                soundIt = fSoftRegionSounds.erase(soundIt);
+                myNode = node;
+                node = node->fNext;
+                myNode->Unlink();
+                myNode->Link(&fActiveSofts);
+
+                // Queue up in our sorted list...
+                if (!sortedList)
+                    myNode->SortedLink(&sortedList, (10.0f - sound->GetPriority()) * rank);
+                else
+                    sortedList->AddToSortedLink( myNode, (10.0f - sound->GetPriority()) * rank );
             } else {
                 // Do NOT notify sound, since we were outside of its range and still are
                 // (but if we're playing, we shouldn't be, so better update)
                 if (sound->IsPlaying())
                     sound->UpdateSoftVolume(false);
 
-                soundIt++;
+                node = node->fNext;
             }
         } else {
             // Do NOT notify sound, since we were outside of its range and still are
-            sound->Disable(); // ensure that dist attenuation is set to zero so we don't accidentally play
-
-            soundIt++;
+            node = node->fNext;
+            sound->Disable();       // ensure that dist attenuation is set to zero so we don't accidentally play
         }
     }
-
-    std::sort(
-        fActiveSofts.begin(), fActiveSofts.end(),
-        [](const plSoftSound& lhs, const plSoftSound& rhs) {
-            // Larger values come first.
-            return lhs.fRank > rhs.fRank;
-        }
-    );
-
+    
     plgAudioSys::fMutedStateChange = false;
     // Go through sorted list, enabling only the first n sounds and disabling the rest
     // DEBUG: Create a screen-only statusLog to display which sounds are what
@@ -598,14 +670,13 @@ void    plAudioSystem::IUpdateSoftSounds(const hsPoint3 &newPosition)
     fDebugActiveSoundDisplay->AddLine(0xff00ffff, "Incidentals");
     fDebugActiveSoundDisplay->AddLine("--------------------");
 
-    auto soundIt = fActiveSofts.begin();
-    for (i = 0; soundIt != fActiveSofts.end() && i < fMaxNumSounds; soundIt++) {
-        plSound* sound = (plSound*)soundIt->fSoundKey->GetObjectPtr();
+    for (i = 0; sortedList && i < fMaxNumSounds; sortedList = sortedList->fSortNext) {
+        plSound* sound = plSound::ConvertNoRef(sortedList->fSoundKey->GetObjectPtr());
         if (!sound)
             continue;
 
         /// Notify sound that it really is still enabled
-        sound->UpdateSoftVolume(true);
+        sound->UpdateSoftVolume( true );
 
         uint32_t color = plStatusLog::kGreen;
         switch (sound->GetStreamType()) {
@@ -622,9 +693,9 @@ void    plAudioSystem::IUpdateSoftSounds(const hsPoint3 &newPosition)
                 break;
         }
 
-        if (sound->GetType() == plgAudioSys::kVoice)
+        if(sound->GetType() == plgAudioSys::kVoice)
             color = 0xffff8800;
-        if (sound->IsPropertySet(plSound::kPropIncidental))
+        if(sound->IsPropertySet(plSound::kPropIncidental))
             color = 0xff00ffff;
 
         if (fUsingEAX && sound->GetEAXSettings().IsEnabled()) {
@@ -632,27 +703,26 @@ void    plAudioSystem::IUpdateSoftSounds(const hsPoint3 &newPosition)
                 color,
                 "{} {1.2f} {1.2f} ({} occ) {}",
                 sound->GetPriority(),
-                soundIt->fRank,
+                sortedList->fRank,
                 sound->GetVolume() ? sound->GetVolumeRank() / sound->GetVolume() : 0,
                 sound->GetEAXSettings().GetCurrSofts().GetOcclusion(),
-                sound->GetKeyName()
-            );
-        } else {
+                sound->GetKeyName());
+        } else  {
             fDebugActiveSoundDisplay->AddLineF(
                 color,
                 "{} {1.2f} {1.2f} {}",
                 sound->GetPriority(),
-                soundIt->fRank,
+                sortedList->fRank,
                 sound->GetVolume() ? sound->GetVolumeRank() / sound->GetVolume() : 0,
-                sound->GetKeyName()
-            );
+                sound->GetKeyName());
         }
         i++;
     }
 
-    for (; soundIt != fActiveSofts.end(); ++soundIt) {
-        plSound* sound = (plSound*)soundIt->fSoundKey->GetObjectPtr();
-        if (!sound)
+    for (; sortedList; sortedList = sortedList->fSortNext, i++)
+    {
+        plSound* sound = plSound::ConvertNoRef(sortedList->fSoundKey->GetObjectPtr());
+        if(!sound)
             continue;
 
         // These unlucky sounds don't get to play (yet). Also, be extra mean
@@ -668,8 +738,7 @@ void    plAudioSystem::IUpdateSoftSounds(const hsPoint3 &newPosition)
             "{} {1.2f} {}",
             sound->GetPriority(),
             sound->GetVolume() ? sound->GetVolumeRank() / sound->GetVolume() : 0,
-            sound->GetKeyName()
-        );
+            sound->GetKeyName());
     }
 
     plProfile_EndTiming(SoundSoftUpdate);
@@ -678,47 +747,27 @@ void    plAudioSystem::IUpdateSoftSounds(const hsPoint3 &newPosition)
 void plAudioSystem::NextDebugSound()
 {
     if (!fCurrDebugSound) {
-        if (!fSoftRegionSounds.empty())
-            fCurrDebugSound = fSoftRegionSounds.front().fSoundKey;
-        else if (!fActiveSofts.empty())
-            fCurrDebugSound = fActiveSofts.front().fSoundKey;
-        else
-            return;
+        fCurrDebugSound = (!fSoftRegionSounds) ? fActiveSofts : fSoftRegionSounds;
     } else {
-        // Trace back to find which list we were in
-        auto soundIt = std::find_if(
-            fSoftRegionSounds.begin(), fSoftRegionSounds.end(),
-            [this](const plSoftSound& value) {
-                return fCurrDebugSound == value.fSoundKey;
+        plSoftSoundNode* node = fCurrDebugSound;
+        fCurrDebugSound = fCurrDebugSound->fNext;
+        if (!fCurrDebugSound) {
+            // Trace back to find which list we were in
+            for (fCurrDebugSound = fSoftRegionSounds; fCurrDebugSound; fCurrDebugSound = fCurrDebugSound->fNext) {
+                // Was in first list, move to 2nd
+                if( fCurrDebugSound == node ) {
+                    fCurrDebugSound = fActiveSofts;
+                    break;
+                }
             }
-        );
-        if (soundIt != fSoftRegionSounds.end()) {
-            // Go to the next sound, if available. If not, go to the next list.
-            soundIt++;
-            if (soundIt != fSoftRegionSounds.end()) {
-                fCurrDebugSound = soundIt->fSoundKey;
-                plSound::SetCurrDebugPlate(fCurrDebugSound);
-                return;
-            }
-        }
-
-        soundIt = std::find_if(
-            fActiveSofts.begin(), fActiveSofts.end(),
-            [this](const plSoftSound& value) {
-                return fCurrDebugSound == value.fSoundKey;
-            }
-        );
-        if (soundIt != fActiveSofts.end()) {
-            // Go to the next sound, if available.
-            soundIt++;
-            if (soundIt != fSoftRegionSounds.end())
-                fCurrDebugSound = soundIt->fSoundKey;
-            else
-                fCurrDebugSound = nullptr;
+            // else Must've been in 2nd list, so keep null
         }
     }
 
-    plSound::SetCurrDebugPlate(fCurrDebugSound);
+    if (fCurrDebugSound)
+        plSound::SetCurrDebugPlate(fCurrDebugSound->fSoundKey);
+    else
+        plSound::SetCurrDebugPlate(nullptr);
 }
 
 void plAudioSystem::SetFadeLength(float lengthSec)
@@ -1060,10 +1109,10 @@ void plgAudioSys::NextDebugSound()
     fSys->NextDebugSound();
 }
 
-void plgAudioSys::RegisterSoftSound(plKey soundKey)
+void plgAudioSys::RegisterSoftSound(const plKey& soundKey)
 {
     if (fSys)
-        fSys->RegisterSoftSound(std::move(soundKey));
+        fSys->RegisterSoftSound(soundKey);
 }
 
 void plgAudioSys::UnregisterSoftSound(const plKey& soundKey)

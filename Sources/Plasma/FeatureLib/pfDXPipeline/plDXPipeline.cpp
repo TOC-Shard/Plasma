@@ -1347,7 +1347,7 @@ bool plDXPipeline::ICreateDevice(bool windowed)
 #ifdef DBG_WRITE_FORMATS
     for (D3DFORMAT fmt : fCurrentMode->fDepthFormats)
     {
-        hsStatusMessage(ST::format("-- Valid depth buffer format: {}", IGetDXFormatName(fmt)).c_str());
+        hsDebugMessage(ST::format("-- Valid depth buffer format: {}", IGetDXFormatName(fmt)).c_str(), 0);
     }
 #endif
 
@@ -1381,13 +1381,13 @@ bool plDXPipeline::ICreateDevice(bool windowed)
         fSettings.fD3DCaps &= ~kCapsZBias;
 
 #ifdef DBG_WRITE_FORMATS
-    hsStatusMessage(ST::format("-- Requesting depth buffer format: {}", IGetDXFormatName(params.AutoDepthStencilFormat)).c_str());
+    hsDebugMessage(ST::format("-- Requesting depth buffer format: {}", IGetDXFormatName(params.AutoDepthStencilFormat)).c_str(), 0);
 #endif
 
 
     params.BackBufferFormat = dispMode.Format;
 #ifdef DBG_WRITE_FORMATS
-    hsStatusMessage(ST::format("-- Requesting back buffer format: {}", IGetDXFormatName(params.BackBufferFormat)).c_str());
+    hsDebugMessage(ST::format("-- Requesting back buffer format: {}", IGetDXFormatName(params.BackBufferFormat)).c_str(), 0);
 #endif
 
     params.hDeviceWindow = fDevice.fHWnd;
@@ -2512,31 +2512,42 @@ bool plDXPipeline::IAvatarSort(plDrawableSpans* d, const std::vector<int16_t>& v
 // which lights a span will use, needs to be stored on the span.
 bool plDXPipeline::PrepForRender(plDrawable* d, std::vector<int16_t>& visList, plVisMgr* visMgr)
 {
-    plProfile_TimingGuard(PrepDrawable);
+    plProfile_BeginTiming(PrepDrawable);
 
     plDrawableSpans *drawable = plDrawableSpans::ConvertNoRef(d);
-    if (!drawable)
+    if( !drawable )
+    {
+        plProfile_EndTiming(PrepDrawable);
         return false;
+    }
 
     // Find our lights
     ICheckLighting(drawable, visList, visMgr);
 
     // Sort our faces
-    if (drawable->GetNativeProperty(plDrawable::kPropSortFaces))
+    if( drawable->GetNativeProperty(plDrawable::kPropSortFaces) )
+    {
         drawable->SortVisibleSpans(visList, this);
+    }
 
     // Prep for render. This is gives the drawable a chance to
     // do any last minute updates for its buffers, including
     // generating particle tri lists.
-    drawable->PrepForRender(this);
+    drawable->PrepForRender( this );
 
     // Any skinning necessary
-    if (!ISoftwareVertexBlend(drawable, visList))
+    if( !ISoftwareVertexBlend(drawable, visList) )
+    {
+        plProfile_EndTiming(PrepDrawable);
         return false;
-
+    }
     // Avatar face sorting happens after the software skin.
-    if (drawable->GetNativeProperty(plDrawable::kPropPartialSort))
+    if( drawable->GetNativeProperty(plDrawable::kPropPartialSort) )
+    {
         IAvatarSort(drawable, visList);
+    }
+
+    plProfile_EndTiming(PrepDrawable);
 
     return true;
 }

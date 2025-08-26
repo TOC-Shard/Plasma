@@ -53,6 +53,8 @@ struct plNCAgeJoiner;
 struct plNCAgeLeaver;
 class plVaultNotifyMsg;
 
+namespace ST { class string; }
+
 class plNetLinkingMgr
 {
     static void NCAgeJoinerCallback (

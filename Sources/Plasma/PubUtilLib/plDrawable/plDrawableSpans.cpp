@@ -1783,11 +1783,8 @@ void plDrawableSpans::SortVisibleSpans(const std::vector<int16_t>& visList, plPi
 
     plProfile_IncCount(FacesSorted, totTris);
 
-    if( sortScratch.size() < totTris )
-    {
-        sortScratch.resize(totTris);
-        triList.resize(3 * totTris);
-    }
+    sortScratch.resize(totTris);
+    triList.resize(3 * totTris);
 
     hsRadixSort::Elem* elem = sortScratch.data();
 

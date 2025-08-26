@@ -68,6 +68,10 @@ public:
         fTransform = mat;
     }
 
+    plWarpMsg(const plKey& s, const plKey& r, const double* t) {
+        Clear();
+    }
+
     plWarpMsg(const plKey& s, const plKey& r, uint32_t flags, const hsMatrix44& mat)
         : fWarpFlags(flags), fTransform(mat), plMessage(s, r, nullptr) { }
 

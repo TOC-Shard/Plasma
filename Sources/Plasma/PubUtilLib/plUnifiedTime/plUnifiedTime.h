@@ -54,6 +54,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 //
 
 class hsStream;
+namespace ST { class string; }
 
 class plUnifiedTime //
 {

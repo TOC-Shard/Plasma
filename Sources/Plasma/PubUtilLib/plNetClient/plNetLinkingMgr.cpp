@@ -810,6 +810,7 @@ void plNetLinkingMgr::IPostProcessLink()
                             fldr->GetNodeId(),
                             info->GetNodeId(),
                             NetCommGetPlayer()->playerInt,
+                            nullptr,
                             nullptr
                         );
             }
@@ -831,6 +832,7 @@ void plNetLinkingMgr::IPostProcessLink()
                             fldr->GetNodeId(),
                             info->GetNodeId(),
                             NetCommGetPlayer()->playerInt,
+                            nullptr,
                             nullptr
                         );
             }

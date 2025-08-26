@@ -61,13 +61,14 @@ plAGChannel::plAGChannel()
 {
 #ifdef TRACK_AG_ALLOCS
     fName = gGlobalAnimName;
-    RegisterAGAlloc(this, gGlobalChannelName, gGlobalAnimName, this->ClassIndex());
+    RegisterAGAlloc(this, gGlobalChannelName.c_str(), gGlobalAnimName.c_str(), this->ClassIndex());
 #endif // TRACK_AG_ALLOCS
 }
 
 // DTOR
 plAGChannel::~plAGChannel()
 {
+    // we do not own the "fName" string, so don't delete it!
 #ifdef TRACK_AG_ALLOCS
     UnRegisterAGAlloc(this);
 #endif // TRACK_AG_ALLOCS

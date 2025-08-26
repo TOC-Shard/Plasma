@@ -50,7 +50,6 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #endif
 #define PLASMA20_SOURCES_PLASMA_PUBUTILLIB_PLNETGAMELIB_PRIVATE_PLNGLGAME_H
 
-#include <functional>
 
 /*****************************************************************************
 *
@@ -73,22 +72,26 @@ void NetCliGameDisconnect ();
 //============================================================================
 // Join Age
 //============================================================================
-using FNetCliGameJoinAgeRequestCallback = std::function<void(ENetError result)>;
+typedef void (*FNetCliGameJoinAgeRequestCallback)(
+    ENetError       result,
+    void *          param
+);
 void NetCliGameJoinAgeRequest (
     unsigned                            ageMcpId,
     const plUUID&                       accountUuid,
     unsigned                            playerInt,
-    FNetCliGameJoinAgeRequestCallback   callback
+    FNetCliGameJoinAgeRequestCallback   callback,
+    void *                              param
 );
 
 //============================================================================
 // Propagate app-specific data
 //============================================================================
-using FNetCliGameRecvBufferHandler = std::function<void(
+typedef void (*FNetCliGameRecvBufferHandler)(
     unsigned                        type,
     unsigned                        bytes,
     const uint8_t                      buffer[]
-)>;
+);
 void NetCliGameSetRecvBufferHandler (
     FNetCliGameRecvBufferHandler    handler
 );
@@ -101,6 +104,6 @@ void NetCliGamePropagateBuffer (
 //============================================================================
 // GameMgrMsg
 //============================================================================
-using FNetCliGameRecvGameMgrMsgHandler = std::function<void(struct GameMsgHeader* msg)>;
+typedef void (*FNetCliGameRecvGameMgrMsgHandler)(struct GameMsgHeader* msg);
 void NetCliGameSetRecvGameMgrMsgHandler(FNetCliGameRecvGameMgrMsgHandler handler);
 void NetCliGameSendGameMgrMsg(const struct GameMsgHeader* msg);

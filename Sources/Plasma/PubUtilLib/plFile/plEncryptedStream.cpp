@@ -42,7 +42,6 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "plEncryptedStream.h"
 
 #include <ctime>
-#include <string_theory/format>
 #include <wchar.h>
 #include <algorithm>
 
@@ -175,13 +174,17 @@ uint32_t plEncryptedStream::IRead(uint32_t bytes, void* buffer)
 {
     if (!fRef)
         return 0;
-    size_t numItems = fread(buffer, 1 /*size*/, bytes /*count*/, fRef);
+    int numItems = (int)(::fread(buffer, 1 /*size*/, bytes /*count*/, fRef));
     fPosition += numItems;
-    if (numItems < bytes) {
+    if ((unsigned)numItems < bytes) {
         if (feof(fRef)) {
-            hsAssert(false, ST::format("Hit EOF on UNIX Read, only read {} out of requested {} bytes", numItems, bytes).c_str());
-        } else {
-            hsAssert(false, ST::format("Error on UNIX Read (ferror = {})", ferror(fRef)).c_str());
+            // EOF ocurred
+            char str[128];
+            sprintf(str, "Hit EOF on UNIX Read, only read %d out of requested %d bytes\n", numItems, bytes);
+            hsDebugMessage(str, 0);
+        }
+        else {
+            hsDebugMessage("Error on UNIX Read", ferror(fRef));
         }
     }
     return numItems;

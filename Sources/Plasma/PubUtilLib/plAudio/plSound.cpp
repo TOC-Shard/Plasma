@@ -685,28 +685,11 @@ bool plSound::MsgReceive( plMessage* pMsg )
         {
             if( refMsg->GetContext() & (plRefMsg::kOnCreate|plRefMsg::kOnRequest|plRefMsg::kOnReplace) )
             {
-                // Only plugins should be doing this, but for safety, if someone does this
-                // in client code, toss any anonymous ref we might be holding.
-                if (fDataBufferLoaded && fDataBuffer != refMsg->GetRef()) {
-                    fDataBufferKey->UnRefObject();
-                    fDataBufferLoaded = false; // More like we aren't holding a ref
-                }
-
-                fDataBufferKey = refMsg->GetRef()->GetKey();
                 fDataBuffer = plSoundBuffer::ConvertNoRef( refMsg->GetRef() );
                 SetLength( fDataBuffer->GetDataLengthInSecs() );
             }
             else
-            {
-                // Only plugins should be doing this, but for safety, if someone does this
-                // in client code, toss any anonymous ref we might be holding.
-                if (fDataBufferLoaded && fDataBufferKey) {
-                    fDataBufferKey->UnRefObject();
-                    fDataBufferLoaded = false;
-                }
                 fDataBuffer = nullptr;
-                fDataBufferKey = nullptr;
-            }
 
             return true;
         }
@@ -774,14 +757,14 @@ bool plSound::ILoadDataBuffer()
 {
     if(!fDataBufferLoaded)
     {
-        fDataBuffer = plSoundBuffer::ConvertNoRef(fDataBufferKey->RefObject());
-        if (!fDataBuffer)
+        plSoundBuffer *buffer = (plSoundBuffer *)fDataBufferKey->RefObject();
+        if(!buffer)
         {
             hsAssert(false, "unable to load sound buffer");
             plStatusLog::AddLineSF("audio.log", "Unable to load sound buffer: {}", GetKeyName());
             return false;
         }
-        SetLength( fDataBuffer->GetDataLengthInSecs() );
+        SetLength( buffer->GetDataLengthInSecs() );
         fDataBufferLoaded = true;
     }
     return true;
@@ -789,9 +772,12 @@ bool plSound::ILoadDataBuffer()
 
 void plSound::FreeSoundData() 
 {
-    if (!fDataBuffer)
-        return; // for plugins
-    fDataBuffer->UnLoad();
+    if(!fDataBufferKey) return; // for plugins
+    plSoundBuffer *buffer = (plSoundBuffer *) fDataBufferKey->ObjectIsLoaded();
+    if(buffer)
+    {
+        buffer->UnLoad();
+    }
 }
 
 void plSound::IUnloadDataBuffer()
@@ -799,7 +785,6 @@ void plSound::IUnloadDataBuffer()
     if(fDataBufferLoaded)
     {
         fDataBufferLoaded = false;
-        fDataBuffer = nullptr;
         fDataBufferKey->UnRefObject();
     }
 }
@@ -813,10 +798,12 @@ plSoundBuffer::ELoadReturnVal plSound::IPreLoadBuffer( bool playWhenLoaded, bool
         return plSoundBuffer::kError;
     }
 
-    if (fDataBuffer && fDataBuffer->IsValid())
+    plSoundBuffer *buffer = (plSoundBuffer *)fDataBufferKey->ObjectIsLoaded();
+
+    if(buffer && buffer->IsValid() )
     {
         plProfile_BeginTiming( SoundLoadTime );
-        plSoundBuffer::ELoadReturnVal retVal = fDataBuffer->AsyncLoad(fDataBuffer->HasFlag(plSoundBuffer::kStreamCompressed) ? plAudioFileReader::kStreamNative : plAudioFileReader::kStreamWAV);
+        plSoundBuffer::ELoadReturnVal retVal = buffer->AsyncLoad(buffer->HasFlag(plSoundBuffer::kStreamCompressed) ? plAudioFileReader::kStreamNative : plAudioFileReader::kStreamWAV);
         if(retVal == plSoundBuffer::kPending)
         {
             fPlayWhenLoaded = playWhenLoaded;
@@ -835,9 +822,12 @@ plSoundBuffer::ELoadReturnVal plSound::IPreLoadBuffer( bool playWhenLoaded, bool
 
 plFileName plSound::GetFileName() const
 {
-    if (fDataBuffer)
-        return fDataBuffer->GetFileName();
-    return {};
+    if (fDataBufferKey->ObjectIsLoaded())
+    {
+        return ((plSoundBuffer *)fDataBufferKey->ObjectIsLoaded())->GetFileName();
+    }
+
+    return "";
 }
 
 /////////////////////////////////////////////////////////////////////////

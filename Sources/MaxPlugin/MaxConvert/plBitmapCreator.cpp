@@ -552,23 +552,16 @@ plBitmap *plBitmapCreator::ICreateTexture( plBitmapData *bd, const plLocation &l
     // Texture reuse optimization
     if( texture )
     {
-        WIN32_FILE_ATTRIBUTE_DATA fileAttrib{};
-        if (GetFileAttributesExW(bd->fileName.WideString().data(), GetFileExInfoStandard, &fileAttrib) != FALSE)
-        {
-            FILETIME &fileTime = fileAttrib.ftLastWriteTime;
+        WIN32_FILE_ATTRIBUTE_DATA fileAttrib;
+        GetFileAttributesExW(bd->fileName.WideString().data(), GetFileExInfoStandard, &fileAttrib);
+        FILETIME &fileTime = fileAttrib.ftLastWriteTime;
 
-            // If this texture has been modified since the last export, delete the old version but reuse the key
-            if (!texture->IsSameModifiedTime(fileTime.dwLowDateTime, fileTime.dwHighDateTime))
-            {
-                DeleteExportedBitmap( texture->GetKey() );
-                texture = nullptr;
-                key = nullptr;
-            }
-        }
-        else
+        // If this texture has been modified since the last export, delete the old version but reuse the key
+        if (!texture->IsSameModifiedTime(fileTime.dwLowDateTime, fileTime.dwHighDateTime))
         {
-            // Well, this really sucks. We couldn't tell what the modify time is, so just pretend all is well (but assert in Debug mode)
-            hsAssert(0, ST::format("Couldn't get bitmap '{}' modify time: {}", bd->fileName, hsCOMError(hsLastWin32Error, GetLastError())).c_str());
+            DeleteExportedBitmap( texture->GetKey() );
+            texture = nullptr;
+            key = nullptr;
         }
     }
 
@@ -651,17 +644,10 @@ plBitmap *plBitmapCreator::ICreateTexture( plBitmapData *bd, const plLocation &l
         }
 
         // Texture reuse optimization
-        WIN32_FILE_ATTRIBUTE_DATA fileAttrib{};
-        if (GetFileAttributesExW(bd->fileName.WideString().data(), GetFileExInfoStandard, &fileAttrib) != FALSE)
-        {
-            FILETIME &fileTime = fileAttrib.ftLastWriteTime;
-            texture->SetModifiedTime(fileTime.dwLowDateTime, fileTime.dwHighDateTime);
-        }
-        else
-        {
-            // Well, this really sucks. We couldn't tell what the modify time is, so just pretend all is well (but assert in Debug mode)
-            hsAssert(0, ST::format("Couldn't set bitmap '{}' modify time: {}", bd->fileName, hsCOMError(hsLastWin32Error, GetLastError())).c_str());
-        }
+        WIN32_FILE_ATTRIBUTE_DATA fileAttrib;
+        GetFileAttributesExW(bd->fileName.WideString().data(), GetFileExInfoStandard, &fileAttrib);
+        FILETIME &fileTime = fileAttrib.ftLastWriteTime;
+        texture->SetModifiedTime(fileTime.dwLowDateTime, fileTime.dwHighDateTime);
 
         // Add to our list of created textures and ref, since we have a hold of them
         IAddBitmap( texture );

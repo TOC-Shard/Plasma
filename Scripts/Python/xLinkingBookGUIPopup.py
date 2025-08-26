@@ -1,44 +1,45 @@
-# /*==LICENSE==*
-#
-# CyanWorlds.com Engine - MMOG client, server and tools
-# Copyright (C) 2011  Cyan Worlds, Inc.
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# Additional permissions under GNU GPL version 3 section 7
-#
-# If you modify this Program, or any covered work, by linking or
-# combining it with any of RAD Game Tools Bink SDK, Autodesk 3ds Max SDK,
-# NVIDIA PhysX SDK, Microsoft DirectX SDK, OpenSSL library, Independent
-# JPEG Group JPEG library, Microsoft Windows Media SDK, or Apple QuickTime SDK
-# (or a modified version of those libraries),
-# containing parts covered by the terms of the Bink SDK EULA, 3ds Max EULA,
-# PhysX SDK EULA, DirectX SDK EULA, OpenSSL and SSLeay licenses, IJG
-# JPEG Library README, Windows Media SDK EULA, or QuickTime SDK EULA, the
-# licensors of this Program grant you additional
-# permission to convey the resulting work. Corresponding Source for a
-# non-source form of such a combination shall include the source code for
-# the parts of OpenSSL and IJG JPEG Library used as well as that of the covered
-# work.
-#
-# You can contact Cyan Worlds, Inc. by email legal@cyan.com
-#  or by snail mail at:
-#       Cyan Worlds, Inc.
-#       14617 N Newport Hwy
-#       Mead, WA   99021
-#
-# *==LICENSE==*/
+# -*- coding: utf-8 -*-
+""" *==LICENSE==*
+
+CyanWorlds.com Engine - MMOG client, server and tools
+Copyright (C) 2011  Cyan Worlds, Inc.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+Additional permissions under GNU GPL version 3 section 7
+
+If you modify this Program, or any covered work, by linking or
+combining it with any of RAD Game Tools Bink SDK, Autodesk 3ds Max SDK,
+NVIDIA PhysX SDK, Microsoft DirectX SDK, OpenSSL library, Independent
+JPEG Group JPEG library, Microsoft Windows Media SDK, or Apple QuickTime SDK
+(or a modified version of those libraries),
+containing parts covered by the terms of the Bink SDK EULA, 3ds Max EULA,
+PhysX SDK EULA, DirectX SDK EULA, OpenSSL and SSLeay licenses, IJG
+JPEG Library README, Windows Media SDK EULA, or QuickTime SDK EULA, the
+licensors of this Program grant you additional
+permission to convey the resulting work. Corresponding Source for a
+non-source form of such a combination shall include the source code for
+the parts of OpenSSL and IJG JPEG Library used as well as that of the covered
+work.
+
+You can contact Cyan Worlds, Inc. by email legal@cyan.com
+ or by snail mail at:
+      Cyan Worlds, Inc.
+      14617 N Newport Hwy
+      Mead, WA   99021
+
+ *==LICENSE==* """
 """
 Module: xLinkingBookGUIPopup
 Age: global
@@ -527,8 +528,9 @@ class xLinkingBookGUIPopup(ptModifier):
                 gLinkingBook = ptBook(bookdef,self.key)
                 gLinkingBook.setSize( width, height )
                 # make sure there is a cover to show
-                if not showOpen and not self.IsThereACover(bookdef):
-                    showOpen = 1
+                if not showOpen:
+                    if not self.IsThereACover(bookdef):
+                        showOpen = 1
                 gLinkingBook.setGUI(gui)
                 gLinkingBook.show(showOpen)
             except LookupError:
@@ -583,7 +585,8 @@ class xLinkingBookGUIPopup(ptModifier):
                 agePanel = SpawnPointTitle_Dict[xLinkingBookDefs.kFirstLinkPanelID]
                 PtDebugPrint("agePanel2 = ",agePanel)
             elif agePanel == "Neighborhood":
-                nblink = self.GetOwnedAgeLink("Neighborhood")
+                agevault = ptAgeVault()
+                nblink = self.GetOwnedAgeLink(agevault, "Neighborhood")
                 if not nblink:
                     SpawnPointTitle_Dict = {xLinkingBookDefs.kFirstLinkPanelID: 'Default'}
                     SpawnPointName_Dict = {xLinkingBookDefs.kFirstLinkPanelID: 'LinkInPointDefault'}
@@ -736,7 +739,7 @@ class xLinkingBookGUIPopup(ptModifier):
         
         # citybook links have been changed to Hood childages, so we search there now
         #vault = ptAgeVault()
-        #OwnedAges = vault.getBookshelfFolder().getChildNodeRefList()
+        #OwnedAges = vault.getAgesIOwnFolder().getChildNodeRefList()
         childAgeFolder = self.IGetHoodInfoNode().getChildAgesFolder()
         HoodChildAges = childAgeFolder.getChildNodeRefList()
         spawnPoints = []
@@ -866,7 +869,7 @@ class xLinkingBookGUIPopup(ptModifier):
     def IsThereACover(self,bookHtml):
         # search the bookhtml string looking for a cover
         idx = bookHtml.find('<cover')
-        if idx >= 0:
+        if idx > 0:
             return 1
         return 0
 
@@ -878,7 +881,7 @@ class xLinkingBookGUIPopup(ptModifier):
         
         # Step 1: Find this age's spawnPoints
         vault = ptAgeVault()
-        OwnedAges = vault.getBookshelfFolder().getChildNodeRefList()
+        OwnedAges = vault.getAgesIOwnFolder().getChildNodeRefList()
         spawnPoints = None
         for NodeRef in OwnedAges:
             tmpLink = NodeRef.getChild().upcastToAgeLinkNode()
@@ -1014,9 +1017,8 @@ class xLinkingBookGUIPopup(ptModifier):
             cam.enableFirstPersonOverride()
 
 
-    def GetOwnedAgeLink(self, age):
-        vault = ptAgeVault()
-        PAL = vault.getBookshelfFolder()
+    def GetOwnedAgeLink(self, vault, age):
+        PAL = vault.getAgesIOwnFolder()
         if PAL is not None:
             contents = PAL.getChildNodeRefList()
             for content in contents:

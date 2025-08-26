@@ -56,6 +56,7 @@ class pfGUIColorScheme;
 class plKey;
 class pyColor;
 class pyKey;
+namespace ST { class string; }
 
 class pyGUIControlTextBox : public pyGUIControl
 {

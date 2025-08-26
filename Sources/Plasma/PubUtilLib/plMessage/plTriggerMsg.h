@@ -53,6 +53,9 @@ protected:
 public:
     
     plTriggerMsg(){SetBCastFlag(plMessage::kBCastByExactType | plMessage::kPropagateToModifiers);}
+    plTriggerMsg(const plKey &s, 
+                    const plKey &r, 
+                    const double* t){SetBCastFlag(plMessage::kBCastByExactType | plMessage::kPropagateToModifiers);}
     ~plTriggerMsg() { }
 
     CLASSNAME_REGISTER( plTriggerMsg );

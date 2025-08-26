@@ -1,44 +1,45 @@
-# /*==LICENSE==*
-#
-# CyanWorlds.com Engine - MMOG client, server and tools
-# Copyright (C) 2011  Cyan Worlds, Inc.
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# Additional permissions under GNU GPL version 3 section 7
-#
-# If you modify this Program, or any covered work, by linking or
-# combining it with any of RAD Game Tools Bink SDK, Autodesk 3ds Max SDK,
-# NVIDIA PhysX SDK, Microsoft DirectX SDK, OpenSSL library, Independent
-# JPEG Group JPEG library, Microsoft Windows Media SDK, or Apple QuickTime SDK
-# (or a modified version of those libraries),
-# containing parts covered by the terms of the Bink SDK EULA, 3ds Max EULA,
-# PhysX SDK EULA, DirectX SDK EULA, OpenSSL and SSLeay licenses, IJG
-# JPEG Library README, Windows Media SDK EULA, or QuickTime SDK EULA, the
-# licensors of this Program grant you additional
-# permission to convey the resulting work. Corresponding Source for a
-# non-source form of such a combination shall include the source code for
-# the parts of OpenSSL and IJG JPEG Library used as well as that of the covered
-# work.
-#
-# You can contact Cyan Worlds, Inc. by email legal@cyan.com
-#  or by snail mail at:
-#       Cyan Worlds, Inc.
-#       14617 N Newport Hwy
-#       Mead, WA   99021
-#
-# *==LICENSE==*/
+# -*- coding: utf-8 -*-
+""" *==LICENSE==*
+
+CyanWorlds.com Engine - MMOG client, server and tools
+Copyright (C) 2011  Cyan Worlds, Inc.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+Additional permissions under GNU GPL version 3 section 7
+
+If you modify this Program, or any covered work, by linking or
+combining it with any of RAD Game Tools Bink SDK, Autodesk 3ds Max SDK,
+NVIDIA PhysX SDK, Microsoft DirectX SDK, OpenSSL library, Independent
+JPEG Group JPEG library, Microsoft Windows Media SDK, or Apple QuickTime SDK
+(or a modified version of those libraries),
+containing parts covered by the terms of the Bink SDK EULA, 3ds Max EULA,
+PhysX SDK EULA, DirectX SDK EULA, OpenSSL and SSLeay licenses, IJG
+JPEG Library README, Windows Media SDK EULA, or QuickTime SDK EULA, the
+licensors of this Program grant you additional
+permission to convey the resulting work. Corresponding Source for a
+non-source form of such a combination shall include the source code for
+the parts of OpenSSL and IJG JPEG Library used as well as that of the covered
+work.
+
+You can contact Cyan Worlds, Inc. by email legal@cyan.com
+ or by snail mail at:
+      Cyan Worlds, Inc.
+      14617 N Newport Hwy
+      Mead, WA   99021
+
+ *==LICENSE==* """
 """
 Module: xDialogStartUp
 Age: Global
@@ -260,7 +261,7 @@ class xDialogStartUp(ptResponder):
                     PtShowDialog("GUIDialog05")
 
             elif event == kInterestingEvent:
-                self.ToggleColor(GUIDiag4a, tagID, on=control.isInteresting())
+                self.ToggleColor(GUIDiag4a, tagID)
 
         #################################
         ##    Explorer Player List     ##
@@ -298,21 +299,7 @@ class xDialogStartUp(ptResponder):
                         PtShowDialog("GUIDialog06")
 
             elif event == kInterestingEvent: ## RollOver Event ##
-                self.ToggleColor(GUIDiag4b, tagID, on=control.isInteresting())
-
-            elif event == kSpecialAction:
-                if tagID in gExp_HotSpot or tagID in gVis_HotSpot:
-                    if gSelectedSlot and gPlayerList[gSelectedSlot-gMinusExplorer]:
-                        PtShowDialog("GUIDialog06a")
-                        PtDebugPrint("Player selected.")
-
-                        # start setting active player (we'll link out when this operation completes)
-                        playerID = gPlayerList[gSelectedSlot-gMinusExplorer][1]
-                        PtDebugPrint("Setting active player.")
-                        PtSetActivePlayer(playerID)
-
-            elif event == kShowHide:
-                self.SyncColorsToSelection(GUIDiag4b, gExp_HotSpot, gExp_TxtBox, gExp_HiLite)
+                self.ToggleColor(GUIDiag4b, tagID)
 
         #################################
         ##        Delete Player        ##
@@ -325,6 +312,8 @@ class xDialogStartUp(ptResponder):
                     PtDeletePlayer(playerID)
 
                 elif  tagID == k4cNoID: ## Cancel Delete ##
+                    if not (gSelectedSlot == k4bPlayer03) or not (gSelectedSlot == k4aPlayer03):
+                        self.ToggleColor(GUIDiag4b, k4bPlayer03)
                     PtHideDialog("GUIDialog04c")
                     self.PlayerListNotify(GUIDiag4b, gExp_HotSpot, 1)
 
@@ -334,6 +323,7 @@ class xDialogStartUp(ptResponder):
         elif id == GUIDiag4d.id:
             if event == kAction or event == kValueChanged:
                 if tagID == k4dYesID: ## OK/Continue from Error ##
+                    self.ToggleColor(GUIDiag4b, k4bPlayer03)
                     self.PlayerListNotify(GUIDiag4b, gExp_HotSpot, 1)
                     PtHideDialog("GUIDialog04d")
                     GUIDiag6.dialog.getControlModFromTag(k6PlayID).enable()
@@ -351,7 +341,7 @@ class xDialogStartUp(ptResponder):
                     PtShowDialog("GUIDialog04b")
                     # if no explorers, unselect all slots so any of them can be clicked again
                     if not gPlayerList or not gPlayerList[1]:
-                        self.SelectSlot(GUIDiag4b, k4bPlayer01)
+                        self.SelectSlot(GUIDiag4b, 0)
 
                 elif  tagID == k6PlayID: ## Play ##
                     playerName = GUIDiag6.dialog.getControlModFromTag(k6NameID).getString()
@@ -371,14 +361,17 @@ class xDialogStartUp(ptResponder):
                         errorString = PtGetLocalizedString("GUI.Dialog04d.ErrorName")
                         GUIDiag4d.dialog.getControlModFromTag(k4dTextID).setString(errorString)
                         PtShowDialog("GUIDialog04d")
+                        self.ToggleColor(GUIDiag4b, k4bPlayer03)
                     elif playerGender == "":
                         errorString = PtGetLocalizedString("GUI.Dialog04d.ErrorGender")
                         GUIDiag4d.dialog.getControlModFromTag(k4dTextID).setString(errorString)
                         PtShowDialog("GUIDialog04d")
+                        self.ToggleColor(GUIDiag4b, k4bPlayer03)
                     elif playerStart == "":
                         errorString = PtGetLocalizedString("GUI.Dialog04d.ErrorPath")
                         GUIDiag4d.dialog.getControlModFromTag(k4dTextID).setString(errorString)
                         PtShowDialog("GUIDialog04d")
+                        self.ToggleColor(GUIDiag4b, k4bPlayer03)
                     else:
                         fixedPlayerName = playerName.strip()
                         (fixedPlayerName, whitespacefixedcount) = re.subn(r"\s{2,}|[\t\n\r\f\v]", " ", fixedPlayerName)
@@ -391,6 +384,7 @@ class xDialogStartUp(ptResponder):
                                 errorString = PtGetLocalizedString("GUI.Dialog04d.IncorrectFormatting")
                             GUIDiag4d.dialog.getControlModFromTag(k4dTextID).setString(errorString)
                             PtShowDialog("GUIDialog04d")
+                            self.ToggleColor(GUIDiag4b, k4bPlayer03)
 
                             GUIDiag6.dialog.getControlModFromTag(k6NameID).setString(fixedPlayerName)
                         else:
@@ -416,11 +410,13 @@ class xDialogStartUp(ptResponder):
                     errorString = PtGetLocalizedString("GUI.Dialog04d.CleftHelp")
                     GUIDiag4d.dialog.getControlModFromTag(k4dTextID).setString(errorString)
                     PtShowDialog("GUIDialog04d")
+                    self.ToggleColor(GUIDiag4b, k4bPlayer03)
 
                 elif tagID == k6ReltoHelpID: ## Relto Help Button ##
                     errorString = PtGetLocalizedString("GUI.Dialog04d.ReltoHelp")
                     GUIDiag4d.dialog.getControlModFromTag(k4dTextID).setString(errorString)
                     PtShowDialog("GUIDialog04d")
+                    self.ToggleColor(GUIDiag4b, k4bPlayer03)
 
     ###########################
     def OnAccountUpdate(self, opType, result, playerInt):
@@ -434,6 +430,7 @@ class xDialogStartUp(ptResponder):
         if result != 0:
             PtDebugPrint("OnAccountUpdate type %u failed: %u" % (opType, result))
             PtHideDialog("GUIDialog06a")
+            self.ToggleColor(GUIDiag4b, k4bPlayer03)
 
             if result == 12:
                 errorString = PtGetLocalizedString("GUI.Dialog04d.NameAlreadyExists")
@@ -505,7 +502,8 @@ class xDialogStartUp(ptResponder):
         elif opType == PtAccountUpdateType.kDeletePlayer:
             self.InitPlayerList(GUIDiag4b, gExp_HotSpot, gExp_TxtBox, gExp_HiLite)
             # unselect all slots so any of them can be clicked again
-            self.SelectSlot(GUIDiag4b, k4bPlayer01)
+            self.SelectSlot(GUIDiag4b, 0)
+            self.ToggleColor(GUIDiag4b, k4bPlayer03)
 
             PtHideDialog("GUIDialog04c")
 
@@ -513,7 +511,7 @@ class xDialogStartUp(ptResponder):
             PtDebugPrint("AccountUpdate - Unknown: optype = %d, result = %d, playerInt = %d" % (opType, result, playerInt))
 
     ###########################
-    def ToggleColor(self, dlgObj, tagID, *, on: bool):
+    def ToggleColor(self,dlgObj,tagID):
         global gTanColor
         global gBlueColor
         global gExp_HotSpot
@@ -524,12 +522,12 @@ class xDialogStartUp(ptResponder):
         idx = gExp_HotSpot.index(tagID)
         respToRun = gExp_HiLite[idx]
 
-        if currentColor == gBlueColor and not on:
-            PtDebugPrint(f"xDialogStartUp: toggle {tagID=} off")
+        if currentColor == gBlueColor:
+            #PtDebugPrint("toggle tagID(%d) off" % (tagID))
             dlgObj.dialog.getControlModFromTag(tagID+10).setForeColor(gTanColor)
             respToRun.run(self.key,state="out")
-        elif currentColor == gTanColor and on:
-            PtDebugPrint(f"xDialogStartUp: toggle {tagID=} on")
+        else:
+            #PtDebugPrint("toggle tagID(%d) on" % (tagID))
             dlgObj.dialog.getControlModFromTag(tagID+10).setForeColor(gBlueColor)
             respToRun.run(self.key,state="in")
 
@@ -540,26 +538,16 @@ class xDialogStartUp(ptResponder):
         if tagID and tagID != gSelectedSlot: ## If there's a currently selected slot, return it to normal ##
             PtDebugPrint("xDialogStartUp.SelectSlot: tagID = %d   gSelectedSlot = %d" % (tagID, gSelectedSlot))
             if gSelectedSlot:
-                self.ToggleColor(dlgObj, gSelectedSlot, on=False)
+                self.ToggleColor(dlgObj, gSelectedSlot)
                 dlgObj.dialog.getControlModFromTag(gSelectedSlot).setNotifyOnInteresting(True)
                 PtDebugPrint("xDialogStartUp.SelectSlot: Setting old slot to Interesting")
 
             gSelectedSlot = tagID
             dlgObj.dialog.getControlModFromTag(gSelectedSlot).setNotifyOnInteresting(False)
             PtDebugPrint("xDialogStartUp.SelectSlot: Setting gSelectedSlot to new val and removing Interesting")
-
-    ###########################
-    def SyncColorsToSelection(self, dlgObj, listHotSpot, listTxtBox, listHiLite):
-        for hotspot, txtbox, resp in zip(listHotSpot, listTxtBox, listHiLite):
-            ctrl = dlgObj.dialog.getControlModFromTag(txtbox)
-            if gSelectedSlot != hotspot and ctrl.getForeColor() == gBlueColor:
-                ctrl.setForeColor(gTanColor)
-                resp.run(self.key, state="out")
-            elif gSelectedSlot == hotspot and ctrl.getForeColor() != gBlueColor:
-                ctrl.setForeColor(gBlueColor)
-                resp.run(self.key, state="in")
-            if not gSelectedSlot != hotspot:
-                ctrl.unFocus()
+        elif tagID == 0:
+            PtDebugPrint("xDialogStartUp.SelectSlot: Setting gSelectedSlot to %d" % (tagID))
+            gSelectedSlot = tagID
 
     ###########################
     def InitPlayerList(self,dlgObj,listHotSpot,listTxtBox,listHiLite):
@@ -608,9 +596,9 @@ class xDialogStartUp(ptResponder):
         try:
             gPlayerList[0]
         except IndexError:
-            self.SelectSlot(dlgObj, k4bPlayer01)
+            self.SelectSlot(dlgObj, 0)
         else:
-            self.ToggleColor(dlgObj, listHotSpot[1], on=True)
+            self.ToggleColor(dlgObj, listHotSpot[1])
             self.SelectSlot(dlgObj, listHotSpot[1])
 
         while len(gPlayerList) < 6:   ## Now That Slots Are Initialized, Fill Out The List ##

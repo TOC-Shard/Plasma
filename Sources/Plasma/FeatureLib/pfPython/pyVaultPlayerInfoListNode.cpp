@@ -77,6 +77,15 @@ bool pyVaultPlayerInfoListNode::HasPlayer( uint32_t playerID )
     return rvn != nullptr;
 }
 
+//==================================================================
+
+static void IAddPlayer_NodesFound(ENetError result, void* param, unsigned nodeIdCount, const unsigned nodeIds[])
+{
+    hsWeakRef<NetVaultNode> parent = static_cast<NetVaultNode*>(param);
+    if (nodeIdCount)
+        VaultAddChildNode(parent->GetNodeId(), nodeIds[0], VaultGetPlayerId(), nullptr, nullptr);
+}
+
 void pyVaultPlayerInfoListNode::AddPlayer( uint32_t playerID )
 {
     if (HasPlayer(playerID) || !fNode)
@@ -92,13 +101,9 @@ void pyVaultPlayerInfoListNode::AddPlayer( uint32_t playerID )
 
     // So, if we know about this node, we can take it easy. If not, we lazy load it.
     if (!nodeIds.empty())
-        VaultAddChildNode(fNode->GetNodeId(), nodeIds[0], VaultGetPlayerId(), nullptr);
+        VaultAddChildNode(fNode->GetNodeId(), nodeIds[0], VaultGetPlayerId(), nullptr, nullptr);
     else
-        VaultFindNodes(&templateNode, [parentId = fNode->GetNodeId()](auto result, auto nodeIdCount, auto nodeIds) {
-            if (nodeIdCount) {
-                VaultAddChildNode(parentId, nodeIds[0], VaultGetPlayerId(), nullptr);
-            }
-        });
+        VaultFindNodes(&templateNode, IAddPlayer_NodesFound, fNode.Get());
 }
 
 void pyVaultPlayerInfoListNode::RemovePlayer( uint32_t playerID )
@@ -112,7 +117,7 @@ void pyVaultPlayerInfoListNode::RemovePlayer( uint32_t playerID )
     access.SetPlayerId(playerID);
 
     if (hsRef<RelVaultNode> rvn = fNode->GetChildNode(&templateNode, 1))
-        VaultRemoveChildNode(fNode->GetNodeId(), rvn->GetNodeId(), nullptr);
+        VaultRemoveChildNode(fNode->GetNodeId(), rvn->GetNodeId(), nullptr, nullptr);
 }
 
 PyObject * pyVaultPlayerInfoListNode::GetPlayer( uint32_t playerID )

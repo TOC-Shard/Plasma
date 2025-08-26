@@ -58,10 +58,61 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include <string_theory/format>
 
 
+///////////////////////////////////////////////////////////////////////////
+/////////////////// For Status Messages ///////////////////////////////////
+///////////////////////////////////////////////////////////////////////////
+hsDebugMessageProc gHSStatusProc = nullptr;
+
+hsDebugMessageProc hsSetStatusMessageProc(hsDebugMessageProc newProc)
+{
+    hsDebugMessageProc oldProc = gHSStatusProc;
+
+    gHSStatusProc = newProc;
+
+    return oldProc;
+}
+
 //////////////////////////////////////////////////////////////////////////
 
+hsDebugMessageProc gHSDebugProc = nullptr;
+
+hsDebugMessageProc hsSetDebugMessageProc(hsDebugMessageProc newProc)
+{
+    hsDebugMessageProc oldProc = gHSDebugProc;
+
+    gHSDebugProc = newProc;
+
+    return oldProc;
+}
+
+#ifdef HS_DEBUGGING
+void hsDebugMessage (const char* message, long val)
+{
+    char    s[1024];
+
+    if (val)
+        s[0] = snprintf(&s[1], 1022, "%s: %ld", message, val);
+    else
+        s[0] = snprintf(&s[1], 1022, "%s", message);
+
+    if (gHSDebugProc)
+        gHSDebugProc(&s[1]);
+    else
+#if HS_BUILD_FOR_WIN32
+    {
+        OutputDebugString(&s[1]);
+        OutputDebugString("\n");
+    }
+#else
+    {
+        fprintf(stderr, "%s\n", &s[1]);
+    }
+#endif
+}
+#endif
+
 static bool s_GuiAsserts = true;
-void hsDebugEnableGuiAsserts(bool enabled)
+void ErrorEnableGui(bool enabled)
 {
     s_GuiAsserts = enabled;
 }
@@ -69,7 +120,7 @@ void hsDebugEnableGuiAsserts(bool enabled)
 #if !defined(HS_DEBUGGING)
 [[noreturn]]
 #endif // defined(HS_DEBUGGING)
-void hsDebugAssertionFailed(int line, const char* file, const char* fmt, ...)
+void ErrorAssert(int line, const char* file, const char* fmt, ...)
 {
 #if defined(HS_DEBUGGING) || !defined(PLASMA_EXTERNAL_RELEASE)
     char msg[1024];
@@ -82,21 +133,22 @@ void hsDebugAssertionFailed(int line, const char* file, const char* fmt, ...)
     if (s_GuiAsserts)
     {
         if (_CrtDbgReport(_CRT_ASSERT, file, line, nullptr, msg))
-            hsDebugBreakAlways();
+            DebugBreakAlways();
 
         // All handling was done by the GUI, so bail.
         return;
     } else
 #endif // _MSC_VER
     {
-        hsDebugPrintToTerminal("-------\nASSERTION FAILED:\nFile: %s   Line: %i\nMessage: %s\n-------", file, line, msg);
+        DebugMsg("-------\nASSERTION FAILED:\nFile: %s   Line: %i\nMessage: %s\n-------",
+                 file, line, msg);
         fflush(stderr);
 
-        hsDebugBreakAlways();
+        DebugBreakAlways();
     }
 #endif // HS_DEBUGGING
 #else
-    hsDebugBreakIfDebuggerPresent();
+    DebugBreakIfDebuggerPresent();
 #endif // defined(HS_DEBUGGING) || !defined(PLASMA_EXTERNAL_RELEASE)
 
     // If no debugger break occurred, just crash.
@@ -105,7 +157,7 @@ void hsDebugAssertionFailed(int line, const char* file, const char* fmt, ...)
 #endif // defined(HS_DEBUGGING)
 }
 
-bool hsDebugIsDebuggerPresent()
+bool DebugIsDebuggerPresent()
 {
 #if defined(HS_BUILD_FOR_WIN32)
     return IsDebuggerPresent();
@@ -134,7 +186,7 @@ bool hsDebugIsDebuggerPresent()
 #endif
 }
 
-void hsDebugBreakIfDebuggerPresent()
+void DebugBreakIfDebuggerPresent()
 {
 #if defined(_MSC_VER)
     __try
@@ -145,14 +197,14 @@ void hsDebugBreakIfDebuggerPresent()
         // Whatever. Don't crash here.
     }
 #elif defined(HS_BUILD_FOR_UNIX)
-    if (hsDebugIsDebuggerPresent())
+    if (DebugIsDebuggerPresent())
         raise(SIGTRAP);
 #else
     // FIXME
 #endif // _MSC_VER
 }
 
-void hsDebugBreakAlways()
+void DebugBreakAlways()
 {
 #if defined(_MSC_VER)
     DebugBreak();
@@ -164,7 +216,7 @@ void hsDebugBreakAlways()
 #endif // _MSC_VER
 }
 
-void hsDebugPrintToTerminal(const char* fmt, ...)
+void DebugMsg(const char* fmt, ...)
 {
     char msg[1024];
     va_list args;
@@ -174,7 +226,7 @@ void hsDebugPrintToTerminal(const char* fmt, ...)
     fprintf(stderr, "%s\n", msg);
 
 #ifdef _MSC_VER
-    if (hsDebugIsDebuggerPresent())
+    if (DebugIsDebuggerPresent())
     {
         // Also print to the MSVC Output window
         OutputDebugStringA(msg);
@@ -185,36 +237,25 @@ void hsDebugPrintToTerminal(const char* fmt, ...)
 
 ////////////////////////////////////////////////////////////////////////////
 
-hsStatusMessageProc gHSStatusProc = nullptr;
-
-hsStatusMessageProc hsSetStatusMessageProc(hsStatusMessageProc newProc)
-{
-    hsStatusMessageProc oldProc = gHSStatusProc;
-
-    gHSStatusProc = newProc;
-
-    return oldProc;
-}
-
 #ifndef PLASMA_EXTERNAL_RELEASE
 
 void hsStatusMessage(const char* message)
 {
-    if (gHSStatusProc) {
-        gHSStatusProc(message);
-    } else {
+  if (gHSStatusProc) {
+    gHSStatusProc(message);
+  } else {
 #if HS_BUILD_FOR_UNIX
-        printf("%s",message);
-        size_t len = strlen(message);
-        if (len>0 && message[len-1]!='\n')
-            printf("\n");
+    printf("%s",message);
+    size_t len = strlen(message);
+    if (len>0 && message[len-1]!='\n')
+        printf("\n");
 #elif HS_BUILD_FOR_WIN32
-        OutputDebugString(message);
-        size_t len = strlen(message);
-        if (len>0 && message[len-1]!='\n')
-            OutputDebugString("\n");
+    OutputDebugString(message);
+    size_t len = strlen(message);
+    if (len>0 && message[len-1]!='\n')
+        OutputDebugString("\n");
 #endif
-    }
+  }
 }
 
 void hsStatusMessageV(const char * fmt, va_list args)
@@ -233,3 +274,26 @@ void hsStatusMessageF(const char * fmt, ...)
 }
 
 #endif
+
+/**************************************/
+char* hsStrcpy(char* dst, const char* src)
+{
+    if (src)
+    {
+        if (dst == nullptr)
+        {
+            size_t count = strlen(src);
+            dst = new char[count + 1];
+            memcpy(dst, src, count);
+            dst[count] = 0;
+            return dst;
+        }
+
+        int32_t i;
+        for (i = 0; src[i] != 0; i++)
+            dst[i] = src[i];
+        dst[i] = 0;
+    }
+
+    return dst;
+}

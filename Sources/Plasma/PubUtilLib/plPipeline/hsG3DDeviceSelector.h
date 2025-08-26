@@ -161,7 +161,6 @@ protected:
     uint32_t        fMemoryBytes;
 
     std::vector<hsG3DDeviceMode> fModes;
-    hsSsize_t                    fDefaultModeIndex;
 
     float   fZBiasRating;
     float   fLODBiasRating;
@@ -241,9 +240,6 @@ public:
     bool    IsInvalid() const { return 0 != ( fFlags & kInvalid ); }
 
     std::vector<hsG3DDeviceMode>& GetModes() { return fModes; }
-
-    const hsG3DDeviceMode* GetDefaultMode() const { return fDefaultModeIndex == -1 ? nullptr : &fModes[fDefaultModeIndex]; }
-    void                   SetDefaultModeIndex(hsSsize_t defaultModeIndex) { fDefaultModeIndex = defaultModeIndex; }
 
     void ClearModes();
     void Clear();

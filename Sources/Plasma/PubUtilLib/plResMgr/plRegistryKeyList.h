@@ -51,6 +51,8 @@ class plRegistryKeyIterator;
 class hsStream;
 class plUoid;
 
+namespace ST { class string; }
+
 //
 //  List of keys for a single class type.
 //

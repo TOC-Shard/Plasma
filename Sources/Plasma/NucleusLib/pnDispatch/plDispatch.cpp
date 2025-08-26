@@ -362,7 +362,7 @@ void plDispatch::IMsgDispatch()
 
                 #ifdef HS_DEBUGGING
                 if (msg->GetBreakBeforeDispatch())
-                    hsDebugBreakIfDebuggerPresent();
+                    DebugBreakIfDebuggerPresent();
                 #endif
                     
                 plProfile_BeginTiming(MsgReceive);

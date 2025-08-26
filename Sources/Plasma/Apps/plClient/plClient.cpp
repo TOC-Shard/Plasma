@@ -476,7 +476,7 @@ void plClient::ISetGraphicsDefaults()
     plDynamicCamMap::SetEnabled(plPipeline::fDefaultPipeParams.PlanarReflections ? true : false);
 }
 
-plPipeline* plClient::ICreatePipeline(hsDisplayHndl disp, hsWindowHndl hWnd, const hsG3DDeviceModeRecord* devMode)
+plPipeline* plClient::ICreatePipeline(hsWindowHndl disp, hsWindowHndl hWnd, const hsG3DDeviceModeRecord* devMode)
 {
     uint32_t renderer = devMode->GetDevice()->GetG3DDeviceType();
 
@@ -498,7 +498,7 @@ plPipeline* plClient::ICreatePipeline(hsDisplayHndl disp, hsWindowHndl hWnd, con
     return new plNullPipeline(disp, hWnd, devMode);
 }
 
-bool plClient::InitPipeline(hsDisplayHndl display, uint32_t devType)
+bool plClient::InitPipeline(hsWindowHndl display, uint32_t devType)
 {
     hsStatusMessage("InitPipeline client\n");
 
@@ -1569,7 +1569,7 @@ bool plClient::MainLoop()
 #endif
 
 #ifdef PLASMA_EXTERNAL_RELEASE
-    if (hsDebugIsDebuggerPresent())
+    if (DebugIsDebuggerPresent())
     {
         NetCliAuthLogClientDebuggerConnect();
         SetDone(true);
@@ -1635,7 +1635,8 @@ bool plClient::IUpdate()
     plProfile_BeginTiming(DispatchQueue);
     plgDispatch::Dispatch()->MsgQueueProcess();
     plProfile_EndTiming(DispatchQueue);
-
+    
+    const char *inputUpdate = "Update";
     if (fInputManager) // Is this used anymore? Seems to always be nil.
         fInputManager->Update();
 
@@ -1690,15 +1691,19 @@ bool plClient::IUpdate()
     // At this point, we just register for a plDelayedTransformMsg when dirtied.
     if (!plCoordinateInterface::GetDelayedTransformsEnabled())
     {
-        plProfile_LapGuard(TransformMsg, ST_LITERAL("Simulation"));
+        const ST::string xFormLap2 = ST_LITERAL("Simulation");
+        plProfile_BeginLap(TransformMsg, xFormLap2);
         xform = new plTransformMsg(nullptr, nullptr, nullptr, nullptr);
         plgDispatch::MsgSend(xform);
+        plProfile_EndLap(TransformMsg, xFormLap2);
     }
     else
     {
-        plProfile_LapGuard(TransformMsg, ST_LITERAL("Delayed"));
+        const ST::string xFormLap3 = ST_LITERAL("Delayed");
+        plProfile_BeginLap(TransformMsg, xFormLap3);
         xform = new plDelayedTransformMsg(nullptr, nullptr, nullptr, nullptr);
         plgDispatch::MsgSend(xform);
+        plProfile_EndLap(TransformMsg, xFormLap3);
     }
 
     plCoordinateInterface::SetTransformPhase(plCoordinateInterface::kTransformPhaseNormal);
@@ -2061,8 +2066,8 @@ void plClient::IDetectAudioVideoSettings()
     else
 #endif
     {
-        plPipeline::fDefaultPipeParams.Width = mode->GetWidth();
-        plPipeline::fDefaultPipeParams.Height = mode->GetHeight();
+        plPipeline::fDefaultPipeParams.Width = hsG3DDeviceSelector::kDefaultWidth;
+        plPipeline::fDefaultPipeParams.Height = hsG3DDeviceSelector::kDefaultHeight;
     }
 
     plPipeline::fDefaultPipeParams.Shadows = 1;

@@ -53,7 +53,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "hsGeometry3.h"
 #include "hsRefCnt.h"
 
-#include "pnNetProtocol/pnNpCommon.h"
+#include "pnNetProtocol/pnNetProtocol.h"
 
 #include <string_theory/string>
 
@@ -269,6 +269,7 @@ struct VaultAgeInfoNode : NetVaultNodeAccess {
 
     VaultAgeInfoNode(hsWeakRef<NetVaultNode> node) : NetVaultNodeAccess(node) { }
 
+    const class plUnifiedTime * GetAgeTime () const;
     void CopyFrom (const plAgeInfoStruct * info);
     void CopyTo (plAgeInfoStruct * info) const;
 };

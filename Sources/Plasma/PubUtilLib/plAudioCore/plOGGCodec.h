@@ -116,7 +116,7 @@ protected:
     uint8_t *           fHeadBuf;
     int                 fCurHeaderPos;
 
-    void IError(int vorbisError, const ST::string& message);
+    void    IError( const char *msg );
     void    IOpen( const plFileName &path, plAudioCore::ChannelSelect whichChan = plAudioCore::kAll );
 };
 

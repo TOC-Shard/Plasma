@@ -120,7 +120,6 @@ public:
     
     void AddDropDownList(int16_t id, const ST::string& scriptName, const ST::string& name, int vid, std::unordered_set<ST::string> vstates, std::vector<ST::string> options);
     void AddPickGrassComponentButton(int16_t id, const ST::string& scriptName, const ST::string& name, int vid, std::unordered_set<ST::string> vstates);
-    void AddPickLayerButton(int16_t id, const ST::string& scriptName, const ST::string& name, int vid, std::unordered_set<ST::string> vstates);
 
     void CreateAutoRollup(IParamBlock2 *pb);
     void DestroyAutoRollup();

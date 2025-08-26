@@ -58,8 +58,6 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include <cstdint>
 #include <type_traits>
 
-namespace ST { class string; }
-
 //======================================
 // Winblows Hacks
 //======================================
@@ -71,29 +69,17 @@ namespace ST { class string; }
     struct HINSTANCE__; typedef struct HINSTANCE__ *HINSTANCE;
 
     typedef HWND hsWindowHndl;
-    typedef HWND hsDisplayHndl;
     typedef HINSTANCE hsWindowInst;
     typedef HINSTANCE HMODULE;
     typedef HMODULE hsLibraryHndl;
     typedef long HRESULT;
     typedef void* HANDLE;
-#elif HS_BUILD_FOR_APPLE
-    // Same note as Windows above - would rather not forward declare but I don't want to
-    // import Foundation or CoreGraphics
-#ifdef HS_BUILD_FOR_IOS
-    // Exception - iOS doesn't support CGDirectDisplayID.
-    // It has UIScreen but that's a Cocoa type.
-    typedef void* hsDisplayHndl;
-#else
-    typedef uint32_t CGDirectDisplayID;
-    typedef CGDirectDisplayID hsDisplayHndl;
-#endif
+#elif HS_BUILD_FOR_MACOS
     typedef void* hsWindowHndl;
     typedef void* hsWindowInst;
     typedef void* hsLibraryHndl;
 #else
     typedef int32_t* hsWindowHndl;
-    typedef int32_t* hsDisplayHndl;
     typedef int32_t* hsWindowInst;
     typedef void* hsLibraryHndl;
 #endif // HS_BUILD_FOR_WIN32
@@ -102,9 +88,9 @@ namespace ST { class string; }
 // Basic macros
 //======================================
 #ifdef HS_BUILD_FOR_WIN32
-#   ifndef CDECL
-#       define CDECL __cdecl
-#   endif
+#    ifndef CDECL
+#        define CDECL __cdecl
+#    endif
 #else
 #   define CDECL
 #endif
@@ -161,21 +147,21 @@ inline uint16_t hsSwapEndian16(uint16_t value)
 }
 inline uint32_t hsSwapEndian32(uint32_t value)
 {
-    return ((value)              << 24) |
-           ((value & 0x0000ff00) << 8)  |
-           ((value & 0x00ff0000) >> 8)  |
-           ((value)              >> 24);
+    return ((value)              << 24) | 
+            ((value & 0x0000ff00) << 8)  |
+            ((value & 0x00ff0000) >> 8)  |
+            ((value)              >> 24);
 }
 inline uint64_t hsSwapEndian64(uint64_t value)
 {
     return ((value)                      << 56) |
-           ((value & 0x000000000000ff00) << 40) |
-           ((value & 0x0000000000ff0000) << 24) |
-           ((value & 0x00000000ff000000) << 8)  |
-           ((value & 0x000000ff00000000) >> 8)  |
-           ((value & 0x0000ff0000000000) >> 24) |
-           ((value & 0x00ff000000000000) >> 40) |
-           ((value)                      >> 56);
+            ((value & 0x000000000000ff00) << 40) |
+            ((value & 0x0000000000ff0000) << 24) |
+            ((value & 0x00000000ff000000) << 8)  |
+            ((value & 0x000000ff00000000) >> 8)  |
+            ((value & 0x0000ff0000000000) >> 24) |
+            ((value & 0x00ff000000000000) >> 40) |
+            ((value)                      >> 56);
 }
 #endif
 
@@ -264,14 +250,36 @@ template <> inline double hsToLE(double value) { return hsToLEDouble(value); }
 ***/
 #define IS_POW2(val) (!((val) & ((val) - 1)))
 
+#ifdef PLASMA_EXTERNAL_RELEASE
+#   define hsStatusMessage(x)                  ((void)0)
+#   define hsStatusMessageF(x, ...)            ((void)0)
+#else
+    void    hsStatusMessage(const char* message);
+    void    hsStatusMessageF(const char * fmt, ...);
+#endif // PLASMA_EXTERNAL_RELEASE
+
+char*   hsStrcpy(char* dstOrNil, const char* src);
+
+inline char* hsStrcpy(const char* src)
+{
+    return hsStrcpy(nullptr, src);
+}
+
+inline char *hsStrncpy(char *strDest, const char *strSource, size_t count)
+{
+    char *temp = strncpy(strDest, strSource, count-1);
+    strDest[count-1] = 0;
+    return temp;
+}
+
 // Use "correct" non-standard string functions based on the
 // selected compiler / library
 #if HS_BUILD_FOR_WIN32
-#   define stricmp     _stricmp
-#   define strnicmp    _strnicmp
+#    define stricmp     _stricmp
+#    define strnicmp    _strnicmp
 #else
-#   define stricmp     strcasecmp
-#   define strnicmp    strncasecmp
+#    define stricmp     strcasecmp
+#    define strnicmp    strncasecmp
 #endif
 
 // flag testing / clearing
@@ -284,11 +292,16 @@ template <> inline double hsToLE(double value) { return hsToLEDouble(value); }
 
 
 #if HS_BUILD_FOR_WIN32
-    // This is for Windows
-#   ifndef fileno
-#       define fileno(__F) _fileno(__F)
-#   endif
+     // This is for Windows
+#    ifndef fileno
+#        define fileno(__F)       _fileno(__F)
+#    endif
+#else
+     // This is for Unix, Linux, OSX, etc.
+#   include <limits.h>
+#   define MAX_PATH PATH_MAX
 #endif
+#define MAX_EXT     (256)
 
 // Useful floating point utilities
 constexpr float hsDegreesToRadians(float deg) { return deg * (hsConstants::pi<float> / 180.f); }
@@ -297,59 +310,60 @@ constexpr float hsInvert(float a) { return 1.f / a; }
 
 /************************ Debug/Error Macros **************************/
 
-void hsDebugEnableGuiAsserts(bool enabled);
+typedef void (*hsDebugMessageProc)(const char message[]);
+extern hsDebugMessageProc gHSDebugProc;
+#define HSDebugProc(m)  { if (gHSDebugProc) gHSDebugProc(m); }
+hsDebugMessageProc hsSetDebugMessageProc(hsDebugMessageProc newProc);
+
+extern hsDebugMessageProc gHSStatusProc;
+hsDebugMessageProc hsSetStatusMessageProc(hsDebugMessageProc newProc);
+
+void ErrorEnableGui (bool enabled);
 
 #ifndef HS_DEBUGGING
 [[noreturn]]
 #endif
-void hsDebugAssertionFailed(int line, const char* file, const char* fmt, ...);
+void ErrorAssert (int line, const char* file, const char* fmt, ...);
 
-bool hsDebugIsDebuggerPresent();
-void hsDebugBreakIfDebuggerPresent();
-void hsDebugBreakAlways();
-
-/**
- * Print a message to stderr (and to the Windows debugger output, if on Windows with a debugger attached).
- * This function's output is never redirected to a log file (unlike hsStatusMessage).
- *
- * Be aware that this function's output is impossible to see for the average player/tester.
- * Prefer using other logging functions instead.
- * Please use hsDebugPrintToTerminal ONLY for debugging messages aimed at developers
- * that must not go to a log file for some reason.
- *
- * @param fmt printf-style format string for the log message
- * @param ... format string arguments
- */
-void hsDebugPrintToTerminal(const char* fmt, ...);
+bool DebugIsDebuggerPresent();
+void DebugBreakIfDebuggerPresent();
+void DebugBreakAlways();
+void DebugMsg(const char* fmt, ...);
 
 #ifdef HS_DEBUGGING
     
-    #define hsAssert(expr, ...)                 (void)( (!!(expr)) || (hsDebugAssertionFailed(__LINE__, __FILE__, __VA_ARGS__), 0) )
-    #define ASSERT(expr)                        (void)( (!!(expr)) || (hsDebugAssertionFailed(__LINE__, __FILE__, #expr), 0) )
-    #define FATAL(...)                          hsDebugAssertionFailed(__LINE__, __FILE__, __VA_ARGS__)
+    void    hsDebugMessage(const char* message, long refcon);
+    #define hsDebugCode(code)                   code
+    #define hsIfDebugMessage(expr, msg, ref)    (void)( (!!(expr)) || (hsDebugMessage(msg, ref), 0) )
+    #define hsAssert(expr, ...)                 (void)( (!!(expr)) || (ErrorAssert(__LINE__, __FILE__, __VA_ARGS__), 0) )
+    #define ASSERT(expr)                        (void)( (!!(expr)) || (ErrorAssert(__LINE__, __FILE__, #expr), 0) )
+    #define ASSERTMSG(expr, ...)                (void)( (!!(expr)) || (ErrorAssert(__LINE__, __FILE__, __VA_ARGS__), 0) )
+    #define FATAL(...)                          ErrorAssert(__LINE__, __FILE__, __VA_ARGS__)
+    #define DEBUG_MSG                           DebugMsg
+    #define DEBUG_BREAK_IF_DEBUGGER_PRESENT     DebugBreakIfDebuggerPresent
     
 #else   /* Not debugging */
 
+    #define hsDebugMessage(message, refcon)     ((void)0)
+    #define hsDebugCode(code)                   /* empty */
+    #define hsIfDebugMessage(expr, msg, ref)    ((void)0)
     #define hsAssert(expr, ...)                 ((void)0)
     #define ASSERT(expr)                        ((void)0)
+    #define ASSERTMSG(expr, ...)                ((void)0)
     #define FATAL(...)                          ((void)0)
+    #define DEBUG_MSG                           (void)
+    #define DEBUG_BREAK_IF_DEBUGGER_PRESENT()   ((void)0)
 
 #endif  // HS_DEBUGGING
 
-#define DEFAULT_FATAL(var) default: FATAL("No valid case for switch variable '" #var "'"); break
 
-typedef void (*hsStatusMessageProc)(const char message[]);
-
-extern hsStatusMessageProc gHSStatusProc;
-hsStatusMessageProc hsSetStatusMessageProc(hsStatusMessageProc newProc);
-
-#ifdef PLASMA_EXTERNAL_RELEASE
-#   define hsStatusMessage(x) ((void)0)
-#   define hsStatusMessageF(x, ...) ((void)0)
+#if defined(_MSC_VER)
+#define  DEFAULT_FATAL(var)  default: FATAL("No valid case for switch variable '" #var "'"); __assume(0); break;
+#elif defined(__GNUC__) || defined(__clang__)
+#define  DEFAULT_FATAL(var)  default: FATAL("No valid case for switch variable '" #var "'"); __builtin_unreachable(); break;
 #else
-    void hsStatusMessage(const char* message);
-    void hsStatusMessageF(const char* fmt, ...);
-#endif // PLASMA_EXTERNAL_RELEASE
+#define  DEFAULT_FATAL(var)  default: FATAL("No valid case for switch variable '" #var "'"); break;
+#endif
 
 #if defined(__clang__) || defined(__GNUC__)
 #   define _COMPILER_WARNING_NAME(warning) "-W" warning

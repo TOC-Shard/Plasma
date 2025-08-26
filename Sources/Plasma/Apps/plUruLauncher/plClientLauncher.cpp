@@ -58,7 +58,8 @@ Mead, WA   99021
 #include "pfPatcher/plManifests.h"
 #include "pfPatcher/pfPatcher.h"
 
-#include "pfConsoleCore/pfServerIni.h"
+#include "pfConsoleCore/pfConsoleEngine.h"
+PF_CONSOLE_LINK_FILE(Core)
 
 #include <algorithm>
 #include <curl/curl.h>
@@ -348,8 +349,9 @@ bool plClientLauncher::CompleteSelfPatch(const std::function<void()>& waitProc) 
 
 // ===================================================
 
-void plClientLauncher::IGotFileServIPs(ENetError result, const ST::string& addr)
+static void IGotFileServIPs(ENetError result, void* param, const ST::string& addr)
 {
+    plClientLauncher* launcher = static_cast<plClientLauncher*>(param);
     NetCliGateKeeperDisconnect();
 
     if (IS_NET_SUCCESS(result)) {
@@ -358,7 +360,7 @@ void plClientLauncher::IGotFileServIPs(ENetError result, const ST::string& addr)
         NetCliFileStartConnect(eapSucks, 1, true);
 
         // Who knows if we will actually connect. So let's start updating.
-        PatchClient();
+        launcher->PatchClient();
     } else if (s_errorProc)
         s_errorProc(result, "Failed to get FileServ addresses");
 }
@@ -389,9 +391,7 @@ void plClientLauncher::InitializeNetCore()
     uint32_t num = GetGateKeeperSrvHostnames(addrs);
 
     NetCliGateKeeperStartConnect(addrs, num);
-    NetCliGateKeeperFileSrvIpAddressRequest(true, [this](auto result, auto addr) {
-        IGotFileServIPs(result, addr);
-    });
+    NetCliGateKeeperFileSrvIpAddressRequest(IGotFileServIPs, this, true);
 
     // Windows is getting a little unreliable about reporting its own state, so we keep
     // track of whether or not we are active now.
@@ -441,9 +441,12 @@ void plClientLauncher::ShutdownNetCore()
 
 // ===================================================
 
-void plClientLauncher::LoadServerIni() const
+bool plClientLauncher::LoadServerIni() const
 {
-    pfServerIni::Load(fServerIni);
+    PF_CONSOLE_INITIALIZE(Core);
+
+    pfConsoleEngine console;
+    return console.ExecuteFile(fServerIni);
 }
 
 void plClientLauncher::ParseArguments()
@@ -467,7 +470,7 @@ void plClientLauncher::ParseArguments()
     std::vector<ST::string> args;
     args.reserve(__argc);
     for (size_t i = 0; i < __argc; i++) {
-        args.push_back(ST::string::from_wchar(__wargv[i]));
+        args.push_back(ST::string::from_utf8(__argv[i]));
     }
 
     plCmdParser cmdParser(cmdLineArgs, std::size(cmdLineArgs));

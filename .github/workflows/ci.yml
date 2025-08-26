@@ -21,14 +21,14 @@ jobs:
           MACHINE_USER_TOKEN: ${{ secrets.MACHINE_USER_REPO_READ }}
 
   windows:
-    runs-on: windows-2022
+    runs-on: windows-2019
     name: ${{ matrix.platform.str }}-${{ matrix.cfg.str }}
     needs: ["max-secrets"]
     strategy:
       matrix:
         platform:
-          - { generator: Visual Studio 17 2022, max-version: 7, arch: Win32, qt-arch: win32_msvc2019, qt-version: 5.15.2,  str: windows-x86 }
-          - { generator: Visual Studio 17 2022, max-version: 2022, arch: x64, qt-arch: win64_msvc2022_64, qt-version: 6.9.1,  str: windows-x64 }
+          - { generator: Visual Studio 16 2019, max-version: 7, arch: Win32, qt-arch: win32_msvc2019, qt-version: 5.15.2,  str: windows-x86 }
+          - { generator: Visual Studio 16 2019, max-version: 2022, arch: x64, qt-arch: win64_msvc2019_64, qt-version: 5.15.2,  str: windows-x64 }
         cfg:
           - { external: OFF, type: RelWithPDB, str: internal-release }
           - { external: OFF, type: Debug, str: internal-debug }
@@ -112,20 +112,20 @@ jobs:
     needs: ["max-secrets"]
     if: github.event_name == 'push' && needs.max-secrets.outputs.HAS_MACHINE_USER_TOKEN == 'true'
 
-    runs-on: windows-2022
+    runs-on: windows-2019
     name: maxplugin-${{ matrix.cfg.str }}-${{ matrix.cfg.sdk-version }}
     strategy:
       matrix:
         cfg:
           # Max 7 and 2022 are tested in the x86 and x64 windows build jobs, respectively.
-          - { sdk-version: 2008, generator: Visual Studio 17 2022, arch: Win32, str: windows-x86 }
-          - { sdk-version: 2012, generator: Visual Studio 17 2022, arch: Win32, str: windows-x86 }
-          - { sdk-version: 2013, generator: Visual Studio 17 2022, arch: x64, str: windows-x64 }
-          - { sdk-version: 2017, generator: Visual Studio 17 2022, arch: x64, str: windows-x64 }
-          - { sdk-version: 2019, generator: Visual Studio 17 2022, arch: x64, str: windows-x64 }
-          - { sdk-version: 2020, generator: Visual Studio 17 2022, arch: x64, str: windows-x64 }
-          - { sdk-version: 2023, generator: Visual Studio 17 2022, arch: x64, str: windows-x64 }
-          - { sdk-version: 2024, generator: Visual Studio 17 2022, arch: x64, str: windows-x64 }
+          - { sdk-version: 2008, generator: Visual Studio 16 2019, arch: Win32, str: windows-x86 }
+          - { sdk-version: 2012, generator: Visual Studio 16 2019, arch: Win32, str: windows-x86 }
+          - { sdk-version: 2013, generator: Visual Studio 16 2019, arch: x64, str: windows-x64 }
+          - { sdk-version: 2017, generator: Visual Studio 16 2019, arch: x64, str: windows-x64 }
+          - { sdk-version: 2019, generator: Visual Studio 16 2019, arch: x64, str: windows-x64 }
+          - { sdk-version: 2020, generator: Visual Studio 16 2019, arch: x64, str: windows-x64 }
+          - { sdk-version: 2023, generator: Visual Studio 16 2019, arch: x64, str: windows-x64 }
+          - { sdk-version: 2024, generator: Visual Studio 16 2019, arch: x64, str: windows-x64 }
 
     steps:
       - name: Checkout Plasma
@@ -182,7 +182,7 @@ jobs:
           path: build/install
 
   linux:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     name: ${{ matrix.platform.str }}-${{ matrix.cfg.str }}
     strategy:
       matrix:
@@ -269,8 +269,8 @@ jobs:
     strategy:
       matrix:
         platform:
-          - { str: macos-arm64, arch: arm64, runner: "macos-14", qt-version: 6, min-deploy-target: 11.0 }
-          - { str: macos-x64, arch: x86_64, runner: "macos-13", qt-version: 5, min-deploy-target: 10.14 }
+          - { str: macos-arm64, arch: arm64, runner: "macos-14" }
+          - { str: macos-x64, arch: x86_64, runner: "macos-13" }
         cfg:
           - { external: OFF, type: RelWithDebInfo, str: internal-release }
           - { external: OFF, type: Debug, str: internal-debug }
@@ -283,7 +283,7 @@ jobs:
       - name: Install dependencies
         run: |
           brew install -q \
-              qt@${{ matrix.platform.qt-version }} \
+              qt@5 \
               autoconf \
               automake \
               libtool \
@@ -314,12 +314,12 @@ jobs:
             -G Xcode \
             -DUSE_VCPKG=ON \
             -DCMAKE_OSX_ARCHITECTURES=${{ matrix.platform.arch }} \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.platform.min-deploy-target }} \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=10.14 \
             -DCMAKE_FIND_FRAMEWORK=LAST \
             -DPLASMA_BUILD_TESTS=ON \
             -DPLASMA_BUILD_TOOLS=ON \
             -DPLASMA_EXTERNAL_RELEASE=${{ matrix.cfg.external }} \
-            -DQt5_ROOT=$(brew --prefix qt@${{ matrix.platform.qt-version }}) \
+            -DQt5_ROOT=$(brew --prefix qt@5) \
             -DVCPKG_INSTALL_OPTIONS=--clean-after-build \
             -S . -B build
         env:

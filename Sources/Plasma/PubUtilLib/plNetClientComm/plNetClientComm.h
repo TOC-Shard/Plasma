@@ -172,7 +172,8 @@ void NetCommDeletePlayer (  // --> plNetCommDeletePlayerMsg
 );
 void NetCommGetPublicAgeList (//-> plNetCommPublicAgeListMsg
     const ST::string&               ageName,
-    void *                          param
+    void *                          param,
+    plNetCommReplyMsg::EParamType   ptype = plNetCommReplyMsg::kParamTypeOther
 );
 void NetCommSetAgePublic (  // --> no msg
     unsigned                ageInfoId,

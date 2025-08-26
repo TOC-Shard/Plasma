@@ -105,7 +105,6 @@ class pfGUIButtonMod : public pfGUIControlMod
         void    HandleMouseDown(hsPoint3 &mousePt, uint8_t modifiers) override;
         void    HandleMouseUp(hsPoint3 &mousePt, uint8_t modifiers) override;
         void    HandleMouseDrag(hsPoint3 &mousePt, uint8_t modifiers) override;
-        void    HandleMouseDblClick(hsPoint3 &mousePt, uint8_t modifiers) override;
 
         void    UpdateBounds(hsMatrix44 *invXformMatrix = nullptr, bool force = false) override;
 
@@ -131,11 +130,6 @@ class pfGUIButtonMod : public pfGUIControlMod
             kNotifyOnUp = 0,
             kNotifyOnDown,
             kNotifyOnUpAndDown
-        };
-
-        enum ExtendedEvents
-        {
-            kDoubleClick,
         };
 
         void    StartDragging();

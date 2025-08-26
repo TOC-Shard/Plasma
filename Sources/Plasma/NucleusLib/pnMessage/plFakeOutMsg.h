@@ -61,6 +61,10 @@ public:
         SetBCastFlag(plMessage::kPropagateToModifiers);
     }
 
+    plFakeOutMsg(const plKey& s, const plKey& r, const double* t) {
+        SetBCastFlag(plMessage::kPropagateToModifiers);
+    }
+
     CLASSNAME_REGISTER(plFakeOutMsg);
     GETINTERFACE_ANY(plFakeOutMsg, plMessage);
 
