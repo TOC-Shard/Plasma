@@ -1,45 +1,44 @@
-# -*- coding: utf-8 -*-
-""" *==LICENSE==*
-
-CyanWorlds.com Engine - MMOG client, server and tools
-Copyright (C) 2011  Cyan Worlds, Inc.
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-Additional permissions under GNU GPL version 3 section 7
-
-If you modify this Program, or any covered work, by linking or
-combining it with any of RAD Game Tools Bink SDK, Autodesk 3ds Max SDK,
-NVIDIA PhysX SDK, Microsoft DirectX SDK, OpenSSL library, Independent
-JPEG Group JPEG library, Microsoft Windows Media SDK, or Apple QuickTime SDK
-(or a modified version of those libraries),
-containing parts covered by the terms of the Bink SDK EULA, 3ds Max EULA,
-PhysX SDK EULA, DirectX SDK EULA, OpenSSL and SSLeay licenses, IJG
-JPEG Library README, Windows Media SDK EULA, or QuickTime SDK EULA, the
-licensors of this Program grant you additional
-permission to convey the resulting work. Corresponding Source for a
-non-source form of such a combination shall include the source code for
-the parts of OpenSSL and IJG JPEG Library used as well as that of the covered
-work.
-
-You can contact Cyan Worlds, Inc. by email legal@cyan.com
- or by snail mail at:
-      Cyan Worlds, Inc.
-      14617 N Newport Hwy
-      Mead, WA   99021
-
- *==LICENSE==* """
+# /*==LICENSE==*
+#
+# CyanWorlds.com Engine - MMOG client, server and tools
+# Copyright (C) 2011  Cyan Worlds, Inc.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Additional permissions under GNU GPL version 3 section 7
+#
+# If you modify this Program, or any covered work, by linking or
+# combining it with any of RAD Game Tools Bink SDK, Autodesk 3ds Max SDK,
+# NVIDIA PhysX SDK, Microsoft DirectX SDK, OpenSSL library, Independent
+# JPEG Group JPEG library, Microsoft Windows Media SDK, or Apple QuickTime SDK
+# (or a modified version of those libraries),
+# containing parts covered by the terms of the Bink SDK EULA, 3ds Max EULA,
+# PhysX SDK EULA, DirectX SDK EULA, OpenSSL and SSLeay licenses, IJG
+# JPEG Library README, Windows Media SDK EULA, or QuickTime SDK EULA, the
+# licensors of this Program grant you additional
+# permission to convey the resulting work. Corresponding Source for a
+# non-source form of such a combination shall include the source code for
+# the parts of OpenSSL and IJG JPEG Library used as well as that of the covered
+# work.
+#
+# You can contact Cyan Worlds, Inc. by email legal@cyan.com
+#  or by snail mail at:
+#       Cyan Worlds, Inc.
+#       14617 N Newport Hwy
+#       Mead, WA   99021
+#
+# *==LICENSE==*/
 
 from __future__ import annotations
 
@@ -197,7 +196,6 @@ kKMEditLine15Row1 = 314
 kKMEditLine16Row1 = 315
 kKMEditLine17Row1 = 316
 kKMEditLine18Row1 = 317
-# these MUST be 100 more than the above constants
 kKMEditLine1Row2 = 400
 kKMEditLine2Row2 = 401
 kKMEditLine3Row2 = 402
@@ -254,7 +252,7 @@ kKMNextPreviousText = 830
 #
 
 class _KeyLine(NamedTuple):
-    controlCode: Union[str, int, None]
+    controlCode: Union[int, str, None]
     singlePlayer: bool
     multiPlayer: bool
 
@@ -321,8 +319,6 @@ kDefaultControlCodeBinds = {
     "Game.KICreateMarkerFolder": ("F8", "(unmapped)"),
     "Game.KICreateMarker": ("F7", "(unmapped)"),
 }
-
-kControlCodes = tuple(kDefaultControlCodeBinds.keys())
 
 kVideoQuality = ["Low", "Medium", "High", "Ultra"]
 kVideoTextureQuality = ["Low", "Medium", "High"]
@@ -699,11 +695,22 @@ class xOptionsMenu(ptModifier):
                 if kmID == kKMOkBtn:
                     KeyMapDlg.dialog.hide()
                 elif kmID in gKM1ControlCodesRow1 or kmID in gKM1ControlCodesRow2:
+                    try:
+                        keyLine = gKM1ControlCodesRow1[kmID]
+                        isPrimary = True
+                    except KeyError:
+                        keyLine = gKM1ControlCodesRow2[kmID]
+                        isPrimary = False
+
+                    if keyLine.controlCode is None:
+                        PtDebugPrint(f"Missing control code definition for ID {kmID}")
+                        return
+
                     self.ISetKeyMapping(
-                        kmID - 300,
+                        keyLine.controlCode,
                         control.getLastKeyCaptured(),
                         control.getLastModifiersCaptured(),
-                        kmID in gKM1ControlCodesRow1
+                        isPrimary
                     )
                     KeyMapDlg.dialog.noFocus()
                     self.IShowMappedKeys(KeyMapDlg.dialog, gKM1ControlCodesRow1, gKM1ControlCodesRow2)
@@ -1770,7 +1777,7 @@ class xOptionsMenu(ptModifier):
             return
 
         # set the key binds back to the saved
-        for controlCode, mappedKey in zip(kDefaultControlCodeBinds, KeyMapString.split(" ")):
+        for controlCode, mappedKey in zip(kDefaultControlCodeBinds, KeyMapString.split()):
             if isinstance(controlCode, str):
                 PtDebugPrint(f"xOptionsMenu.LoadKeyMap(): Binding {mappedKey=} to {controlCode=}", level=kWarningLevel)
                 km.bindKeyToConsoleCommand(mappedKey, controlCode)
@@ -1806,12 +1813,11 @@ class xOptionsMenu(ptModifier):
         else:
             raise ValueError(f"{keyIdx=}")
 
-    def ISetKeyMapping(self, controlCodeId: int, vkey: int, modifiers: int, isPrimary: bool) -> None:
+    def ISetKeyMapping(self, controlCode: Union[int, str], vkey: int, modifiers: int, isPrimary: bool) -> None:
         km = ptKeyMap()
         newKeyStr = km.convertVKeyToChar(vkey, modifiers)
 
         # If this is the same key as before, unmap the binding.
-        controlCode = kControlCodes[controlCodeId]
         if self.IGetBoundKey(controlCode, keyIdx=0 if isPrimary else 1) == newKeyStr:
             newKeyStr = "(unmapped)"
 

@@ -58,8 +58,7 @@ protected:
     bool IEval(double secs, float del, uint32_t dirty) override { return false; }
 
 public:
-    plImageLibMod();
-    virtual ~plImageLibMod();
+    plImageLibMod() {};
 
     CLASSNAME_REGISTER( plImageLibMod );
     GETINTERFACE_ANY( plImageLibMod, plSingleModifier );
@@ -75,6 +74,9 @@ public:
     };
 
     size_t  GetNumImages() const { return fImages.size(); }
+    plBitmap* GetImage(const ST::string&) const;
+    std::vector<plBitmap*> GetImages() const { return fImages; }
+    std::vector<ST::string> GetImageNames() const;
 };
 
 #endif // plImageLibMod_inc

@@ -108,14 +108,12 @@ struct CliGkConn : hsRefCnt, AsyncNotifySocketCallbacks {
 //============================================================================
 struct PingRequestTrans : NetGateKeeperTrans {
     FNetCliGateKeeperPingRequestCallback    m_callback;
-    void *                                  m_param;
     unsigned                                m_pingAtMs;
     unsigned                                m_replyAtMs;
     std::vector<uint8_t>                    m_payload;
     
     PingRequestTrans (
         FNetCliGateKeeperPingRequestCallback    callback,
-        void *                                  param,
         unsigned                                pingAtMs,
         unsigned                                payloadBytes,
         const void *                            payload
@@ -134,13 +132,11 @@ struct PingRequestTrans : NetGateKeeperTrans {
 //============================================================================
 struct FileSrvIpAddressRequestTrans : NetGateKeeperTrans {
     FNetCliGateKeeperFileSrvIpAddressRequestCallback    m_callback;
-    void *                                              m_param;
     ST::string                                          m_addr;
     bool                                                m_isPatcher;
     
     FileSrvIpAddressRequestTrans (
         FNetCliGateKeeperFileSrvIpAddressRequestCallback    callback,
-        void *                                              param,
         bool                                                isPatcher
     );
 
@@ -157,12 +153,10 @@ struct FileSrvIpAddressRequestTrans : NetGateKeeperTrans {
 //============================================================================
 struct AuthSrvIpAddressRequestTrans : NetGateKeeperTrans {
     FNetCliGateKeeperAuthSrvIpAddressRequestCallback    m_callback;
-    void *                                              m_param;
     ST::string                                          m_addr;
 
     AuthSrvIpAddressRequestTrans (
-        FNetCliGateKeeperAuthSrvIpAddressRequestCallback    callback,
-        void *                                              param
+        FNetCliGateKeeperAuthSrvIpAddressRequestCallback    callback
     );
 
     bool Send() override;
@@ -609,13 +603,11 @@ static NetMsgInitRecv s_recv[] = {
 //============================================================================
 PingRequestTrans::PingRequestTrans (
     FNetCliGateKeeperPingRequestCallback    callback,
-    void *                          param,
     unsigned                        pingAtMs,
     unsigned                        payloadBytes,
     const void *                    payload
 ) : NetGateKeeperTrans(kPingRequestTrans)
-,   m_callback(callback)
-,   m_param(param)
+,   m_callback(std::move(callback))
 ,   m_pingAtMs(pingAtMs)
 ,   m_payload((const uint8_t *)payload, (const uint8_t *)payload + payloadBytes)
 {
@@ -645,7 +637,6 @@ void PingRequestTrans::Post () {
 
     m_callback(
         m_result,
-        m_param,
         m_pingAtMs,
         m_replyAtMs,
         m_payload.size(),
@@ -678,11 +669,9 @@ bool PingRequestTrans::Recv (
 //============================================================================
 FileSrvIpAddressRequestTrans::FileSrvIpAddressRequestTrans (
     FNetCliGateKeeperFileSrvIpAddressRequestCallback    callback,
-    void *                                              param,
     bool                                                isPatcher
 ) : NetGateKeeperTrans(kGkFileSrvIpAddressRequestTrans)
-,   m_callback(callback)
-,   m_param(param)
+,   m_callback(std::move(callback))
 ,   m_isPatcher(isPatcher)
 {
 }
@@ -710,7 +699,6 @@ void FileSrvIpAddressRequestTrans::Post () {
 
     m_callback(
         m_result,
-        m_param,
         m_addr
     );
 }
@@ -739,11 +727,9 @@ bool FileSrvIpAddressRequestTrans::Recv (
 
 //============================================================================
 AuthSrvIpAddressRequestTrans::AuthSrvIpAddressRequestTrans (
-    FNetCliGateKeeperFileSrvIpAddressRequestCallback    callback,
-    void *                                              param
+    FNetCliGateKeeperAuthSrvIpAddressRequestCallback    callback
 ) : NetGateKeeperTrans(kGkAuthSrvIpAddressRequestTrans)
-,   m_callback(callback)
-,   m_param(param)
+,   m_callback(std::move(callback))
 {
 }
 
@@ -768,7 +754,6 @@ void AuthSrvIpAddressRequestTrans::Post () {
 
     m_callback(
         m_result,
-        m_param,
         m_addr
     );
 }
@@ -839,9 +824,7 @@ void GateKeeperInitialize () {
         kNetProtocolCli2GateKeeper,
         s_send, std::size(s_send),
         s_recv, std::size(s_recv),
-        kGateKeeperDhGValue,
-        plBigNum(sizeof(kGateKeeperDhXData), kGateKeeperDhXData),
-        plBigNum(sizeof(kGateKeeperDhNData), kGateKeeperDhNData)
+        gNetGateKeeperDhConstants
     );
 }
 
@@ -906,28 +889,17 @@ void NetCliGateKeeperStartConnect (
     gateKeeperAddrCount = std::min(gateKeeperAddrCount, 1u);
 
     for (unsigned i = 0; i < gateKeeperAddrCount; ++i) {
-        // Do we need to lookup the address?
         const ST::string& name = gateKeeperAddrList[i];
-        const char* pos;
-        for (pos = name.begin(); pos != name.end(); ++pos) {
-            if (!(isdigit(*pos) || *pos == '.' || *pos == ':')) {
-                AsyncAddressLookupName(name, GetClientPort(), [name](auto addrs) {
-                    if (addrs.empty()) {
-                        ReportNetError(kNetProtocolCli2GateKeeper, kNetErrNameLookupFailed);
-                        return;
-                    }
-
-                    for (const plNetAddress& addr : addrs) {
-                        Connect(name, addr);
-                    }
-                });
-                break;
+        AsyncAddressLookupName(name, GetClientPort(), [name](auto addrs) {
+            if (addrs.empty()) {
+                ReportNetError(kNetProtocolCli2GateKeeper, kNetErrNameLookupFailed);
+                return;
             }
-        }
-        if (pos == name.end()) {
-            plNetAddress addr(name, GetClientPort());
-            Connect(name, addr);
-        }
+
+            for (const plNetAddress& addr : addrs) {
+                Connect(name, addr);
+            }
+        });
     }
 }
 
@@ -946,12 +918,10 @@ void NetCliGateKeeperPingRequest (
     unsigned                                pingTimeMs,
     unsigned                                payloadBytes,
     const void *                            payload,
-    FNetCliGateKeeperPingRequestCallback    callback,
-    void *                                  param
+    FNetCliGateKeeperPingRequestCallback    callback
 ) {
     PingRequestTrans * trans = new PingRequestTrans(
-        callback,
-        param,
+        std::move(callback),
         pingTimeMs, 
         payloadBytes,
         payload
@@ -961,19 +931,17 @@ void NetCliGateKeeperPingRequest (
 
 //============================================================================
 void NetCliGateKeeperFileSrvIpAddressRequest (
-    FNetCliGateKeeperFileSrvIpAddressRequestCallback    callback,
-    void *                                              param,
-    bool                                                isPatcher
+    bool                                                isPatcher,
+    FNetCliGateKeeperFileSrvIpAddressRequestCallback    callback
 ) {
-    FileSrvIpAddressRequestTrans * trans = new FileSrvIpAddressRequestTrans(callback, param, isPatcher);
+    FileSrvIpAddressRequestTrans * trans = new FileSrvIpAddressRequestTrans(std::move(callback), isPatcher);
     NetTransSend(trans);
 }
 
 //============================================================================
 void NetCliGateKeeperAuthSrvIpAddressRequest (
-    FNetCliGateKeeperAuthSrvIpAddressRequestCallback    callback,
-    void *                                              param
+    FNetCliGateKeeperAuthSrvIpAddressRequestCallback    callback
 ) {
-    AuthSrvIpAddressRequestTrans * trans = new AuthSrvIpAddressRequestTrans(callback, param);
+    AuthSrvIpAddressRequestTrans * trans = new AuthSrvIpAddressRequestTrans(std::move(callback));
     NetTransSend(trans);
 }

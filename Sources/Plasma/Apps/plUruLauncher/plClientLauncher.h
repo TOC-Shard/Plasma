@@ -95,6 +95,7 @@ private:
 
     void IOnPatchComplete(ENetError result, const ST::string& msg);
     bool IApproveDownload(const plFileName& file);
+    void IGotFileServIPs(ENetError result, const ST::string& addr);
 
 public:
     plClientLauncher();
@@ -138,7 +139,7 @@ public:
     /** Load the server configuration file. Note that you MUST parse the command
      *  arguments before calling this function!
      */
-    bool LoadServerIni() const;
+    void LoadServerIni() const;
 
     /** Parse the command line options. */
     void ParseArguments();

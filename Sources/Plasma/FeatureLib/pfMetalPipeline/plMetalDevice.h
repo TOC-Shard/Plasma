@@ -65,8 +65,16 @@ class plCubicEnvironmap;
 class plLayerInterface;
 class plMetalPipelineState;
 
-// NOTE: Results of this will be row major
-matrix_float4x4* hsMatrix2SIMD(const hsMatrix44& src, matrix_float4x4* dst);
+inline const matrix_float4x4 hsMatrix2SIMD(const hsMatrix44& src)
+{
+    constexpr auto matrixSize = sizeof(matrix_float4x4);
+    if (src.fFlags & hsMatrix44::kIsIdent) {
+        return matrix_identity_float4x4;
+    }
+    simd_float4x4 dst;
+    memcpy(&dst, &src.fMap, matrixSize);
+    return dst;
+}
 
 class plMetalDevice
 {
@@ -190,6 +198,15 @@ public:
     MTL::PixelFormat GetFramebufferFormat() const { return fFramebufferFormat; };
     
     MTL::Library* GetShaderLibrary() const { return fShaderLibrary; }
+    
+    static constexpr MTL::StorageMode GetDefaultStorageMode()
+    {
+#ifdef HS_BUILD_FOR_MACOS
+        return MTL::StorageModeManaged;
+#else
+        return MTL::StorageModeShared;
+#endif
+    }
 
 private:
     struct plMetalPipelineRecord
@@ -216,6 +233,7 @@ private:
     
     void SetOutputLayer(CA::MetalLayer* layer) { fLayer = layer; }
     CA::MetalLayer* GetOutputLayer() const { return fLayer; };
+    hsDisplayHndl fDisplay;
 
 protected:
     plMetalLinkedPipeline* PipelineState(plMetalPipelineState* pipelineState);

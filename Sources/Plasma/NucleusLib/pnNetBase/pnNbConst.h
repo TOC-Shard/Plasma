@@ -53,14 +53,16 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 // Network constants
 //============================================================================
 const unsigned kMaxTcpPacketSize                = 1460;
-const unsigned kNetDefaultStringSize            = 260;
+const unsigned kDefaultClientPort = 14617;
 
 //============================================================================
 // Crypto constants
 //============================================================================
 const unsigned kNetMaxSymmetricSeedBytes        = 7;    // 56 bits
 const unsigned kNetDiffieHellmanKeyBits         = 512;
-//COMPILER_ASSERT_HEADER(DH, IS_POW2(kNetDiffieHellmanKeyBits));
+const unsigned kNetAuthDefaultDhGValue = 41;
+const unsigned kNetGameDefaultDhGValue = 73;
+const unsigned kNetGateKeeperDefaultDhGValue = 4;
 
 //============================================================================
 // Data constants
@@ -82,6 +84,11 @@ const unsigned kMaxGTOSIdLength                 = 8;
 const unsigned kMaxGameScoreNameLength          = 64;
 const unsigned kMaxEmailAddressLength           = 64;
 const unsigned kMaxTracebackLength              = 1024;
+const unsigned kMaxFileExtensionLength          = 256;
+
+// For string lengths that were formerly set to MAX_PATH,
+// which is 260 on Windows, but generally different on other OSes.
+const unsigned kNetDefaultStringSize            = 260;
 
 /*****************************************************************************
 *

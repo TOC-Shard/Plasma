@@ -1,45 +1,44 @@
-# -*- coding: utf-8 -*-
-""" *==LICENSE==*
-
-CyanWorlds.com Engine - MMOG client, server and tools
-Copyright (C) 2011  Cyan Worlds, Inc.
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-Additional permissions under GNU GPL version 3 section 7
-
-If you modify this Program, or any covered work, by linking or
-combining it with any of RAD Game Tools Bink SDK, Autodesk 3ds Max SDK,
-NVIDIA PhysX SDK, Microsoft DirectX SDK, OpenSSL library, Independent
-JPEG Group JPEG library, Microsoft Windows Media SDK, or Apple QuickTime SDK
-(or a modified version of those libraries),
-containing parts covered by the terms of the Bink SDK EULA, 3ds Max EULA,
-PhysX SDK EULA, DirectX SDK EULA, OpenSSL and SSLeay licenses, IJG
-JPEG Library README, Windows Media SDK EULA, or QuickTime SDK EULA, the
-licensors of this Program grant you additional
-permission to convey the resulting work. Corresponding Source for a
-non-source form of such a combination shall include the source code for
-the parts of OpenSSL and IJG JPEG Library used as well as that of the covered
-work.
-
-You can contact Cyan Worlds, Inc. by email legal@cyan.com
- or by snail mail at:
-      Cyan Worlds, Inc.
-      14617 N Newport Hwy
-      Mead, WA   99021
-
- *==LICENSE==* """
+# /*==LICENSE==*
+#
+# CyanWorlds.com Engine - MMOG client, server and tools
+# Copyright (C) 2011  Cyan Worlds, Inc.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# Additional permissions under GNU GPL version 3 section 7
+#
+# If you modify this Program, or any covered work, by linking or
+# combining it with any of RAD Game Tools Bink SDK, Autodesk 3ds Max SDK,
+# NVIDIA PhysX SDK, Microsoft DirectX SDK, OpenSSL library, Independent
+# JPEG Group JPEG library, Microsoft Windows Media SDK, or Apple QuickTime SDK
+# (or a modified version of those libraries),
+# containing parts covered by the terms of the Bink SDK EULA, 3ds Max EULA,
+# PhysX SDK EULA, DirectX SDK EULA, OpenSSL and SSLeay licenses, IJG
+# JPEG Library README, Windows Media SDK EULA, or QuickTime SDK EULA, the
+# licensors of this Program grant you additional
+# permission to convey the resulting work. Corresponding Source for a
+# non-source form of such a combination shall include the source code for
+# the parts of OpenSSL and IJG JPEG Library used as well as that of the covered
+# work.
+#
+# You can contact Cyan Worlds, Inc. by email legal@cyan.com
+#  or by snail mail at:
+#       Cyan Worlds, Inc.
+#       14617 N Newport Hwy
+#       Mead, WA   99021
+#
+# *==LICENSE==*/
 """
 Module: ahnyPressurePlates
 Age: Ahnonay
@@ -52,7 +51,6 @@ from Plasma import *
 from PlasmaTypes import *
 from PlasmaKITypes import *
 import xLinkingBookDefs
-import xRandom
 
 
 # define the attributes that will be entered in max
@@ -142,10 +140,6 @@ class ahnyPressurePlates(ptModifier):
 
 
     ###########################
-    def OnServerInitComplete(self):
-        pass
-
-    ###########################
     def OnSDLNotify(self,VARname,SDLname,playerID,tag):
         if VARname == "ahnyCurrentSphere" and respSphereRotate.value != []:
             PtDebugPrint("ahnyPressurePlates.OnSDLNotify(): playing audio SFX")
@@ -177,7 +171,7 @@ class ahnyPressurePlates(ptModifier):
                                     occupiedZones[index]= occupiedZones[index] + 1
                                 if respLightList != [] and occupiedZones[index]==1: # if we are now equal to one run the responder 
                                     respClockLights.run(self.key, state='on', objectName=respLightList[index], netForce=1 )
-                                PtDebugPrint("%s - enter %s" % (str(occupiedZones), str(index)))
+                                PtDebugPrint(f"ahnyPressurePlates.OnNotify(): {occupiedZones=} enter - {index=}", level=kDebugDumpLevel)
                             else: #this should be exiting
                                 if occupiedZones[index] != 0: #only subtract if we are not zero don't want to overflow
                                     occupiedZones[index] = occupiedZones[index] -1
@@ -187,9 +181,9 @@ class ahnyPressurePlates(ptModifier):
                                             respClockLights.run(self.key, state='off', objectName=respLightList[index], netForce=1)
                                 else:
 
-                                    if (respLightList != []) and (occupiedZones[index] == 0):# 
+                                    if (respLightList != []) and (occupiedZones[index] == 0):
                                         respClockLights.run(self.key, state='off', objectName=respLightList[index] , netForce=1)
-                                PtDebugPrint("%s - exit %s" % (str(occupiedZones), str(index)))
+                                PtDebugPrint(f"ahnyPressurePlates.OnNotify(): {occupiedZones=} exit - {index=}", level=kDebugDumpLevel)
                             ageSDL[SDLOccupied.value] = tuple(occupiedZones)
                             #PtDebugPrint("Occupied: %s" % (str(occupiedZones)))
 
@@ -215,7 +209,7 @@ class ahnyPressurePlates(ptModifier):
                     if event[1] == PtBookEventTypes.kNotifyImageLink:
                         if event[2] >= xLinkingBookDefs.kFirstLinkPanelID or event[2] == xLinkingBookDefs.kBookMarkID:
                             PtDebugPrint("ahnyPressurePlates:Book: hit linking panel %s" % (event[2]))
-                            self.HideBook(1)
+                            self.HideBook()
 
                             ageSDL = PtGetAgeSDL()
                             PtDebugPrint(ageSDL[SDLOccupied.value])
@@ -231,39 +225,6 @@ class ahnyPressurePlates(ptModifier):
                                 PtDebugPrint("Sphere staying put")
 
                             respLinkResponder.run(self.key, avatar=PtGetLocalAvatar(),netPropagate=0)
-
-                            '''
-                            vault = ptVault()
-                            myAges = vault.getAgesIOwnFolder()
-                            myAges = myAges.getChildNodeRefList()
-                            for ageInfo in myAges:
-                                link = ageInfo.getChild()
-                                link = link.upcastToAgeLinkNode()
-                                info = link.getAgeInfo()
-                                if not info:
-                                    continue
-                                ageName = info.getAgeFilename()
-                                spawnPoints = link.getSpawnPoints()
-
-                                if ageName == "Ahnonay":
-                                    ahnySDL = info.getAgeSDL()
-                                    ahnyRecord = ahnySDL.getStateDataRecord()
-                                    currentSphere = ahnyRecord.findVar("ahnyCurrentSphere")
-                                    if (sphere.value == "1"):
-                                        currentSphere.setInt(2,0)
-                                    elif (sphere.value == "2"):
-                                        currentSphere.setInt(3,0)
-                                    elif (sphere.value == "3"):
-                                        currentSphere.setInt(1,0)
-                                    elif (sphere.value == "4"):
-                                        currentSphere.setInt(1,0)
-                                    else:
-                                        PtDebugPrint("missing sphere identifier string!")
-                                    ahnySDL.setStateDataRecord(ahnyRecord)
-                                    ahnySDL.save()
-                                    PtDebugPrint("advanced from sphere ",sphere.value)
-                                    return
-                            '''
         
                     elif event[1] == PtBookEventTypes.kNotifyShow:
                         PtDebugPrint("ahnyLinkBookGUIPopup:Book: NotifyShow")
@@ -328,60 +289,9 @@ class ahnyPressurePlates(ptModifier):
             PtDebugPrint("ahnyLinkBookGUIPopup: could not find age AhnonayCathedral's linking panel")
 
     ###########################
-    def HideBook(self, islinking = 0):
+    def HideBook(self):
         global gLinkingBook
         
         PtToggleAvatarClickability(True) # enable me as clickable
         if gLinkingBook:
             gLinkingBook.hide()
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-"""
-
-    # utility functions:
-
-
-    ###########################
-    def IGetAgeFilename(self):
-        try:
-            name = xLinkingBookDefs.xLinkDestinations[TargetAge.value][0]
-        except:
-            PtDebugPrint("IGetAgeFilename(): " + TargetAge.value + " is missing from the xLinkDestinations table, attempting to use it as the value")
-            name = TargetAge.value
-        return name
-
-    ###########################
-    def IGetAgeInstanceName(self):
-        try:
-            name = xLinkingBookDefs.xLinkDestinations[TargetAge.value][0]
-        except:
-            PtDebugPrint("IGetAgeInstanceName(): " + TargetAge.value + " is missing from the xLinkDestinations table, attempting to use it as the value")
-            name = TargetAge.value
-        return name
-
-
-    ###########################
-    def IGetAgeSpawnPoint(self):
-        try:
-            name = xLinkingBookDefs.xLinkDestinations[TargetAge.value][1]
-        except:
-            PtDebugPrint("IGetAgeSpawnPoint(): " + TargetAge.value + " is missing from the xLinkDestinations table, attempting to use an empty string as the value")
-            name = ""
-        return name
-
-"""
