@@ -47,7 +47,6 @@ set(CoreLib_HEADERS
     hsFILELock.h
     hsGeometry3.h
     hsLockGuard.h
-    hsMain.inl
     hsMatrix44.h
     hsMatrixMath.h
     hsPoint2.h
