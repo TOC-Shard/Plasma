@@ -60,7 +60,9 @@ const unsigned kNetDefaultStringSize            = 260;
 //============================================================================
 const unsigned kNetMaxSymmetricSeedBytes        = 7;    // 56 bits
 const unsigned kNetDiffieHellmanKeyBits         = 512;
-//COMPILER_ASSERT_HEADER(DH, IS_POW2(kNetDiffieHellmanKeyBits));
+const unsigned kNetAuthDefaultDhGValue          = 64;
+const unsigned kNetGameDefaultDhGValue          = 64;
+const unsigned kNetGateKeeperDefaultDhGValue    = 64;
 
 //============================================================================
 // Data constants

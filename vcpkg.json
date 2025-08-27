@@ -22,7 +22,15 @@
       "libvorbis",
       "libvpx",
       "libwebm",
-      "openal-soft",
+      {
+        "name": "openal-soft",
+        "features": [
+          {
+            "name": "pipewire",
+            "platform": "linux"
+          }
+        ]
+      },
       "openssl",
       "opus",
       "physx",
@@ -58,7 +66,7 @@
         ]
       }
     },
-    "builtin-baseline": "f7423ee180c4b7f40d43402c2feb3859161ef625",
+    "builtin-baseline": "dd3097e305afa53f7b4312371f62058d2e665320",
     "vcpkg-configuration": {
       "overlay-ports": ["./Scripts/Ports"],
       "overlay-triplets": ["./Scripts/Triplets"]
