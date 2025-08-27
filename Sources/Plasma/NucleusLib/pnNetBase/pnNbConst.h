@@ -60,9 +60,9 @@ const unsigned kDefaultClientPort = 14617;
 //============================================================================
 const unsigned kNetMaxSymmetricSeedBytes        = 7;    // 56 bits
 const unsigned kNetDiffieHellmanKeyBits         = 512;
-const unsigned kNetAuthDefaultDhGValue = 41;
-const unsigned kNetGameDefaultDhGValue = 73;
-const unsigned kNetGateKeeperDefaultDhGValue = 4;
+const unsigned kNetAuthDefaultDhGValue          = 64;
+const unsigned kNetGameDefaultDhGValue          = 64;
+const unsigned kNetGateKeeperDefaultDhGValue    = 64;
 
 //============================================================================
 // Data constants

@@ -70,6 +70,7 @@ public:
     ST::string fStatusUrl;
     ST::string fSignupUrl;
     ST::string fDisplayName;
+    ST::string fDonateUrl;
     unsigned int fPort;
     ST::string fFileHostname;
     ST::string fAuthHostname;
@@ -82,6 +83,7 @@ public:
         : fStatusUrl(),
           fSignupUrl(),
           fDisplayName(),
+          fDonateUrl(),
           fPort(kDefaultClientPort),
           fFileHostname(),
           fAuthHostname(),
