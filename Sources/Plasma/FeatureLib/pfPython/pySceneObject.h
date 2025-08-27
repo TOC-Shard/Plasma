@@ -57,7 +57,6 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "pyKey.h"
 
 class pyMatrix44;
-namespace ST { class string; }
 
 class pySceneObject
 {
@@ -116,6 +115,7 @@ public:
     ST::string GetName();
     std::vector<PyObject*> GetResponders(); // pyKey list
     std::vector<PyObject*> GetPythonMods(); // pyKey list
+    std::vector<PyObject*> GetImageLibMods(); // pyKey list
     //
     // deteremine if this object (or the first object in the list)
     // ...is locally owned

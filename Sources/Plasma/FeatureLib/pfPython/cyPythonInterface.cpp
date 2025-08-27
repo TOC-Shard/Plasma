@@ -139,9 +139,6 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "pyAgeInfoStruct.h"
 #include "pyAgeLinkStruct.h"
 
-// dni info source
-#include "pyDniInfoSource.h"
-
 // audio setting stuff
 #include "pyAudioControl.h"
 
@@ -155,6 +152,8 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "pyJournalBook.h"
 
 #include "pyKeyMap.h"
+#include "pyImageLibMod.h"
+#include "pyLayer.h"
 #include "pyStream.h"
 
 #include "pyMoviePlayer.h"
@@ -177,6 +176,8 @@ bool    PythonInterface::IsInShutdown = false;           // whether we are _real
 
 PyObject* PythonInterface::stdOut = nullptr;            // python object of the stdout file
 PyObject* PythonInterface::stdErr = nullptr;            // python object of the err file
+
+PyObject* PythonInterface::builtInModuleName = nullptr;
 
 bool      PythonInterface::debug_initialized = false;   // has the debug been initialized yet?
 PyObject* PythonInterface::dbgMod = nullptr;            // display module for stdout and stderr
@@ -928,8 +929,15 @@ void PythonInterface::initPython()
     if (!ICheckedInit<PyConfig, Py_InitializeFromConfig, PyConfig_Clear>(config, dbgLog, "Main init failed!"))
         return;
 
+    // Create an interned string for __builtins__ so we don't have to keep converting the string over and over.
+    // Python LIKELY already has this string interned.
+    builtInModuleName = PyUnicode_InternFromString("__builtins__");
+
     // Initialize built-in Plasma modules. For some reason, when using the append-inittab thingy,
     // we get complaints about these modules being leaked :(
+    // Note: If you add a new built-in module,
+    // please add it to the list in Scripts/Python/plasma/generate_stubs.py
+    // so that a stub will be generated for the new module.
     IInitBuiltinModule("Plasma", "Plasma 2.0 Game Library", dbgLog, AddPlasmaClasses, AddPlasmaMethods);
     IInitBuiltinModule("PlasmaConstants", "Plasma 2.0 Constants", dbgLog, AddPlasmaConstantsClasses);
     IInitBuiltinModule("PlasmaGame", "Plasma 2.0 GameMgr Library", dbgLog, AddPlasmaGameClasses);
@@ -1037,6 +1045,7 @@ void PythonInterface::AddPlasmaMethods(PyObject* m)
     pyGUIDialog::AddPlasmaMethods(m);
     pyImage::AddPlasmaMethods(m);
     pyJournalBook::AddPlasmaMethods(m);
+    pyLayer::AddPlasmaMethods(m);
     pySDLModifier::AddPlasmaMethods(m);
     pySpawnPointInfo::AddPlasmaMethods(m);
 }
@@ -1076,11 +1085,12 @@ void PythonInterface::AddPlasmaClasses(PyObject* plasmaMod)
     pyAudioControl::AddPlasmaClasses(plasmaMod);
     pyCluster::AddPlasmaClasses(plasmaMod);
     pyDniCoordinates::AddPlasmaClasses(plasmaMod);
-    pyDniInfoSource::AddPlasmaClasses(plasmaMod);
     pyDynamicText::AddPlasmaClasses(plasmaMod);
     pyImage::AddPlasmaClasses(plasmaMod);
+    pyImageLibMod::AddPlasmaClasses(plasmaMod);
     pyJournalBook::AddPlasmaClasses(plasmaMod);
     pyKeyMap::AddPlasmaClasses(plasmaMod);
+    pyLayer::AddPlasmaClasses(plasmaMod);
     pyMarkerMgr::AddPlasmaClasses(plasmaMod);
     pyMoviePlayer::AddPlasmaClasses(plasmaMod);
     pyNetLinkingMgr::AddPlasmaClasses(plasmaMod);
@@ -1257,6 +1267,9 @@ void PythonInterface::finiPython()
         if (usePythonDebugger)
             debugServer.Disconnect();
 #endif
+
+        Py_CLEAR(builtInModuleName);
+
         // let Python clean up after itself
         if (Py_FinalizeEx() != 0)
             dbgLog->AddLine("Hmm... Errors during Python shutdown.");
@@ -1439,7 +1452,7 @@ PyObject* PythonInterface::CreateModule(const char* module)
     {
         // clear it
         hsAssert(false, ST::format("ERROR! Creating a python module of the same name - {}", module).c_str());
-        _PyModule_Clear(m);
+        ClearModule(m);
     }
 
     // create the module
@@ -1449,12 +1462,12 @@ PyObject* PythonInterface::CreateModule(const char* module)
     d = PyModule_GetDict(m);
     // add in the built-ins
     // first make sure that we don't already have the builtins
-    if (PyDict_GetItemString(d, "__builtins__") == nullptr)
+    if (PyDict_GetItem(d, builtInModuleName) == nullptr)
     {
         // if we need the builtins then find the builtin module
         PyObject *bimod = PyImport_ImportModule("builtins");
         // then add the builtin dicitionary to our module's dictionary
-        if (bimod == nullptr || PyDict_SetItemString(d, "__builtins__", bimod) != 0) {
+        if (bimod == nullptr || PyDict_SetItem(d, builtInModuleName, bimod) != 0) {
             getOutputAndReset();
             return nullptr;
         }
@@ -1463,6 +1476,42 @@ PyObject* PythonInterface::CreateModule(const char* module)
     return m;
 }
 
+void PythonInterface::ClearModule(PyObject* m)
+{
+    hsAssert(PyModule_Check(m), "PythonInterface::ClearModule() called on a non-module object");
+    PyObject* dict = PyModule_GetDict(m);
+
+    // This is basically a reimplementation of the _PyModule_ClearDict function. It's been
+    // "private" forever but was finally removed from Python's public API as of 3.13. So,
+    // here we are.
+    Py_ssize_t pos = 0;
+    PyObject* key;
+    PyObject* value;
+
+    // First, clear everything that begins with a single underscore.
+    while (PyDict_Next(dict, &pos, &key, &value)) {
+        if (value == Py_None && !PyUnicode_Check(key))
+            continue;
+        if (!(PyUnicode_READ_CHAR(key, 0) == '_' && PyUnicode_READ_CHAR(key, 1) != '_'))
+            continue;
+        if (PyDict_SetItem(dict, key, Py_None) != 0)
+            PyErr_Print();
+    }
+
+    // Finally, clear everything except __builtins__
+    pos = 0;
+    while (PyDict_Next(dict, &pos, &key, &value)) {
+        if (value == Py_None || !PyUnicode_Check(key))
+            continue;
+        if (PyUnicode_Compare(key, builtInModuleName) != 0) {
+            if (PyErr_Occurred())
+                PyErr_Print();
+            continue;
+        }
+        if (PyDict_SetItem(dict, key, Py_None) != 0)
+            PyErr_Print();
+    }
+}
 
 /////////////////////////////////////////////////////////////////////////////
 //

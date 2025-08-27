@@ -204,9 +204,7 @@ void plMetalMaterialShaderRef::EncodeArguments(MTL::RenderCommandEncoder* encode
 
 void plMetalMaterialShaderRef::EncodeTransform(const plLayerInterface* layer, UVOutDescriptor* transform)
 {
-    matrix_float4x4 tXfm;
-    hsMatrix2SIMD(layer->GetTransform(), &tXfm);
-    transform->transform = tXfm;
+    transform->transform = hsMatrix2SIMD(layer->GetTransform());
     transform->UVWSrc = layer->GetUVWSrc();
 }
 
@@ -252,7 +250,7 @@ void plMetalMaterialShaderRef::ILoopOverLayers()
         // a lot of the render state, it will be on the GPU already.
         // I'd like to encode more data here, and use a heap. The heap hasn't happened yet because heaps are
         // private memory, and we don't have a window yet for a blit phase into private memory.
-        MTL::Buffer* argumentBuffer = fDevice->newBuffer(sizeof(plMetalFragmentShaderArgumentBuffer), MTL::ResourceStorageModeManaged);
+        MTL::Buffer* argumentBuffer = fDevice->newBuffer(sizeof(plMetalFragmentShaderArgumentBuffer), plMetalDevice::GetDefaultStorageMode());
 
         plMetalFragmentShaderArgumentBuffer* layerBuffer = (plMetalFragmentShaderArgumentBuffer*)argumentBuffer->contents();
 
@@ -287,7 +285,9 @@ void plMetalMaterialShaderRef::ILoopOverLayers()
 
         fPasses.push_back(layers);
 
-        argumentBuffer->didModifyRange(NS::Range(0, argumentBuffer->length()));
+        if (argumentBuffer->storageMode() == MTL::StorageModeManaged) {
+            argumentBuffer->didModifyRange(NS::Range(0, argumentBuffer->length()));
+        }
 
         fPassArgumentBuffers.push_back(argumentBuffer);
 

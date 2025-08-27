@@ -212,6 +212,11 @@ vertex ColorInOut pipelineVertexShader(Vertex in [[stage_in]],
             // Omni Light in all directions
             const float3 v2l = lightSource->position.xyz - position.xyz;
             const float distance = length(v2l);
+            
+            if (distance > lightSource->range) {
+                continue;
+            }
+            
             direction.xyz = normalize(v2l);
 
             direction.w = 1.f / (lightSource->constAtten + lightSource->linAtten * distance + lightSource->quadAtten * pow(distance, 2.f));
@@ -246,10 +251,10 @@ vertex ColorInOut pipelineVertexShader(Vertex in [[stage_in]],
     // Fog
     out.fogColor = uniforms.calcFog(vCamPosition);
 
-    const float4 normal = (uniforms.localToWorldMatrix * float4(in.normal, 0.f)) * uniforms.worldToCameraMatrix;
+    const float4 cameraSpaceNormal = normalize(((float4(in.normal, 0.f) * uniforms.localToWorldMatrix) * uniforms.worldToCameraMatrix));
 
     for (size_t layer=0; layer<num_layers; layer++) {
-        (&out.texCoord1)[layer] = uniforms.sampleLocation(layer, &in.texCoord1, normal, vCamPosition);
+        (&out.texCoord1)[layer] = uniforms.sampleLocation(layer, &in.texCoord1, cameraSpaceNormal, vCamPosition);
     }
 
     out.position = vCamPosition * uniforms.projectionMatrix;
@@ -260,7 +265,7 @@ vertex ColorInOut pipelineVertexShader(Vertex in [[stage_in]],
 constexpr void blendFirst(half4 srcSample, thread half4 &destSample, const uint32_t blendFlags);
 constexpr void blend(half4 srcSample, thread half4 &destSample, uint32_t blendFlags);
 
-float3 VertexUniforms::sampleLocation(size_t index, thread float3 *texCoords, const float4 normal, const float4 camPosition) constant
+float3 VertexUniforms::sampleLocation(size_t index, thread float3 *texCoords, const float4 cameraSpaceNormal, const float4 camPosition) constant
 {
     const uint32_t UVWSrc = uvTransforms[index].UVWSrc;
     float4x4 matrix = uvTransforms[index].transform;
@@ -348,7 +353,7 @@ float3 VertexUniforms::sampleLocation(size_t index, thread float3 *texCoords, co
     switch (UVWSrc) {
     case kUVWNormal:
         {
-            sampleCoord = normal * matrix;
+            sampleCoord = cameraSpaceNormal * matrix;
         }
         break;
     case kUVWPosition:
@@ -358,7 +363,7 @@ float3 VertexUniforms::sampleLocation(size_t index, thread float3 *texCoords, co
         break;
     case kUVWReflect:
         {
-            sampleCoord = reflect(normalize(camPosition), normalize(normal)) * matrix;
+            sampleCoord = reflect(normalize(camPosition), cameraSpaceNormal) * matrix;
         }
         break;
     default:
@@ -618,8 +623,6 @@ vertex ColorInOut shadowCastVertexShader(Vertex in                              
 
     float4 position = (float4(in.position, 1.f) * uniforms.localToWorldMatrix);
     const float3 Ndirection = normalize(float4(in.normal, 0.f) * uniforms.localToWorldMatrix).xyz;
-    // Shadow casting uses the diffuse material color to control opacity
-    const half4 MDiffuse = uniforms.diffuseCol;
 
     //w is attenation
     float4 direction;
@@ -635,7 +638,8 @@ vertex ColorInOut shadowCastVertexShader(Vertex in                              
     }
 
     const float3 dotResult = dot(Ndirection, direction.xyz);
-    const half3 diffuse = MDiffuse.rgb * half3(max(0.h, dotResult)) * shadowState.power;
+    // Post lighting diffuse color needs to be clamped to the 0..1 range even though >1.f is valid.
+    const half3 diffuse = clamp(shadowState.opacity * half3(max(0.h, dotResult)) * shadowState.power, 0.f, 1.f);
     out.vtxColor = half4(diffuse, 1.f);
 
     const float4 vCamPosition = position * uniforms.worldToCameraMatrix;
@@ -643,10 +647,11 @@ vertex ColorInOut shadowCastVertexShader(Vertex in                              
     // Fog
     out.fogColor = uniforms.calcFog(vCamPosition);
 
-    const float4 normal = (uniforms.localToWorldMatrix * float4(in.normal, 0.f)) * uniforms.worldToCameraMatrix;
+    // FIXME: Shadow casting doesn't use normals. Simplify texture sampling.
+    const float4 cameraSpaceNormal = normalize(((float4(in.normal, 0.f) * uniforms.localToWorldMatrix) * uniforms.worldToCameraMatrix));
 
     for (size_t layer=0; layer<num_layers; layer++) {
-        (&out.texCoord1)[layer] = uniforms.sampleLocation(layer, &in.texCoord1, normal, vCamPosition);
+        (&out.texCoord1)[layer] = uniforms.sampleLocation(layer, &in.texCoord1, cameraSpaceNormal, vCamPosition);
     }
 
     out.position = vCamPosition * uniforms.projectionMatrix;

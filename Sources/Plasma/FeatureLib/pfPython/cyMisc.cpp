@@ -527,7 +527,7 @@ ST::string cyMisc::GetLocalClientName()
 
 
 //
-// Get Current age information - DEPRECIATED. Use ptDniInfoSource() object instead
+// Get Current age information
 //
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -583,14 +583,6 @@ PyObject* cyMisc::GetPrevAgeInfo()
     }
     PYTHON_RETURN_NONE; // return none, not nullptr (cause it isn't really an error... or is it?)
 }
-
-// current time in current age
-uint32_t cyMisc::GetAgeTime()
-{
-    return VaultAgeGetAgeTime();
-}
-
-
 
 time_t cyMisc::GetDniTime()
 {
@@ -692,7 +684,7 @@ void cyMisc::ExcludeRegionSetNow(pyKey& sender, pyKey& exKey, uint16_t state)
     }
     msg->SetSender(sender.getKey());
     msg->AddReceiver(exKey.getKey());
-    msg->fSynchFlags = plSynchedObject::kSendImmediately;
+    msg->fSynchFlags |= plSynchedObject::kSendImmediately;
     plgDispatch::MsgSend( msg );    // whoosh... off it goes
 }
 
@@ -2169,19 +2161,13 @@ void cyMisc::ShootBulletFromObject(pyKey &selfkey, pySceneObject* sobj, float ra
 //////////////////////////////////////////////////////////////////////////////
 //
 // Function   : GetPublicAgeList
-// PARAMETERS : ageName, callback object
+// PARAMETERS : ageName
 //
 // PURPOSE    : Get the list of public ages for the given age name.
 //
-void cyMisc::GetPublicAgeList(const ST::string& ageName, PyObject * cbObject)
+void cyMisc::GetPublicAgeList(const ST::string& ageName)
 {
-    if (cbObject)
-        Py_XINCREF(cbObject);
-    NetCommGetPublicAgeList(
-        ageName,
-        cbObject,
-        plNetCommReplyMsg::kParamTypePython
-    );
+    NetCommGetPublicAgeList(ageName, nullptr);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -2679,12 +2665,7 @@ void cyMisc::ForceVaultNodeUpdate(unsigned nodeId)
 
 void cyMisc::VaultDownload(unsigned nodeId)
 {
-    VaultDownloadAndWait(
-        "PyVaultDownload",
-        nodeId,
-        nullptr,
-        nullptr
-    );
+    VaultDownloadAndWait("PyVaultDownload", nodeId, nullptr);
 }
 
 PyObject* cyMisc::CloneKey(pyKey* object, bool loading) {
