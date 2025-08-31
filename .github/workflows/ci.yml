@@ -210,6 +210,11 @@ jobs:
               ninja-build \
               qtbase5-dev
 
+      - name: Install NuGet
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nuget
+
       - name: Setup cmake
         uses: jwlawson/actions-setup-cmake@v2
         with:
