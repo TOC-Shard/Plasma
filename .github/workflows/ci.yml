@@ -208,7 +208,8 @@ jobs:
               libtool \
               nasm \
               ninja-build \
-              qtbase5-dev
+              qtbase5-dev \
+              mono-complete
 
       - name: Setup cmake
         uses: jwlawson/actions-setup-cmake@v2
