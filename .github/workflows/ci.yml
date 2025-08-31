@@ -210,7 +210,10 @@ jobs:
               ninja-build \
               qtbase5-dev \
               mono-complete \
-              python3-dev
+              python3-dev \
+              python3-venv \
+              python3-distutils \
+              python3.12-dev
 
       - name: Setup cmake
         uses: jwlawson/actions-setup-cmake@v2
