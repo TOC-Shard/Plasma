@@ -182,7 +182,7 @@ jobs:
           path: build/install
 
   linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     name: ${{ matrix.platform.str }}-${{ matrix.cfg.str }}
     strategy:
       matrix:
@@ -208,25 +208,24 @@ jobs:
               libtool \
               nasm \
               ninja-build \
-              qtbase5-dev \
-              mono-complete \
-              python3 \
-              python3-dev
+              qtbase5-dev
 
       - name: Setup cmake
         uses: jwlawson/actions-setup-cmake@v2
         with:
           cmake-version: '3.29.2'
-              
+
       - name: Setup NuGet
         run: |
-          dotnet nuget add source \
-            --username "${{ github.repository_owner }}" \
-            --password "${{ secrets.GITHUB_TOKEN }}" \
-            --store-password-in-clear-text \
-            --name "GitHub" \
-            "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
-
+          nuget sources add \
+              -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
+              -storepasswordincleartext \
+              -name "GitHub" \
+              -username "${{ github.repository_owner }}" \
+              -password "${{ secrets.GITHUB_TOKEN }}"
+          nuget setapikey \
+              "${{ secrets.GITHUB_TOKEN }}" \
+              -source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
 
       - name: Configure
         run: |
@@ -245,7 +244,6 @@ jobs:
       - name: Build
         run: |
           cmake --build build -j 2
-
       - name: Test
         run: |
           cmake --build build --target check -j 4
@@ -255,7 +253,6 @@ jobs:
       - name: Install
         run: |
           cmake --build build --target install -j 4
-
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
