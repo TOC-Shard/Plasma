@@ -1546,6 +1546,10 @@ class ptAvatar:
         """Exits the avatar from the subWorld where it was"""
         ...
 
+    def findBone(self, bone_name: str) -> ptSceneObject:
+        """Find the ptSceneObject for the requested bone"""
+        ...
+
     def getAllWithSameMesh(self, clothing_name):
         """Returns a lilst of all clothing items that use the same mesh as the specified one"""
         ...
@@ -2075,6 +2079,10 @@ class ptCritterBrain:
         """Returns how far away the brain can hear."""
         ...
 
+    def getLocallyControlled(self) -> bool:
+        """Are we the one making AI decisions? NOTE: Not set automatically, some python script needs to tell the brain this using setLocallyControlled()."""
+        ...
+
     def getSceneObject(self):
         """Returns the ptSceneObject this brain controls."""
         ...
@@ -2125,6 +2133,10 @@ class ptCritterBrain:
 
     def setHearingDistance(self, dist):
         """Set how far away the brain can hear (360 degree field of hearing)."""
+        ...
+
+    def setLocallyControlled(self, local: bool) -> None:
+        """Tells the brain that we are the ones making all the AI decisions, and to prop location and other information to the server."""
         ...
 
     def setSightCone(self, radians):
@@ -5369,6 +5381,41 @@ class ptVaultPlayerInfoNode(ptVaultNode):
 
     def playerSetOnline(self, state):
         """Not sure this should be used. Sets the state of the player online status for this player info node."""
+        ...
+
+class ptVaultPlayerNode(ptVaultNode):
+    """Plasma vault player node"""
+
+    def getAvatarShapeName(self):
+        """Returns the avatar's 'shape'"""
+        ...
+
+    def getOnlineTime(self):
+        """Returns the avatar's online time"""
+        ...
+
+    def getPlayerName(self):
+        """Returns the player's name"""
+        ...
+
+    def isDisabled(self):
+        """Is the avatar disabled?"""
+        ...
+
+    def setAvatarShapeName(self, name):
+        """Sets the avatar's 'shape'"""
+        ...
+
+    def setDisabled(self, state):
+        """Disables/enables the avatar"""
+        ...
+
+    def setOnlineTime(self, time):
+        """Sets the avatar's online time"""
+        ...
+
+    def setPlayerName(self, name):
+        """Sets the player's name"""
         ...
 
 class ptVaultSDLNode(ptVaultNode):

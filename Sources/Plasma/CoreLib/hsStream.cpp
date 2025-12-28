@@ -42,6 +42,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 
 #include "hsStream.h"
 
+#include "hsEndian.h"
 #include "hsExceptions.h"
 
 #include <cctype>
@@ -897,7 +898,7 @@ uint32_t hsQueueStream::Write(uint32_t byteCount, const void* buffer)
     {
 #if 0
         if (fReadCursor < fWriteCursor+length+1)
-            hsStatusMessage("ReadCursor wrapped\n");
+            hsStatusMessage("ReadCursor wrapped");
 #endif
         fReadCursor = std::min(fReadCursor, fWriteCursor+length+1);
         fReadCursor %= fSize;

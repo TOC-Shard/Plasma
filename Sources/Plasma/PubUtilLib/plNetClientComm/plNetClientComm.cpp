@@ -39,11 +39,6 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
       Mead, WA   99021
 
 *==LICENSE==*/
-/*****************************************************************************
-*
-*   $/Plasma20/Sources/Plasma/PubUtilLib/plNetClientComm/plNetClientComm.cpp
-*   
-***/
 
 #include "plNetClientComm.h"
 
@@ -59,7 +54,9 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "pnEncryption/plChallengeHash.h"
 #include "pnFactory/plFactory.h"
 #include "pnNetBase/pnNbConst.h"
+#include "pnNetBase/pnNbSrvs.h"
 #include "pnNetCli/pnNetCli.h"
+#include "pnNetCommon/plNetAddress.h"
 #include "pnNetCommon/plNetApp.h"
 #include "pnUtils/pnUtStr.h"
 

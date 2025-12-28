@@ -55,6 +55,7 @@ class plIcicle;
 class plPlate;
 class plMetalMaterialShaderRef;
 class plAuxSpan;
+class plMetalLightRef;
 class plMetalVertexShader;
 class plMetalFragmentShader;
 class plShadowCaster;
@@ -168,18 +169,23 @@ public:
     MTL::PixelFormat GetFramebufferFormat() { return fDevice.GetFramebufferFormat(); };
     void             SetFramebufferFormat(MTL::PixelFormat format) { fDevice.SetFramebufferFormat(format); };
 
+    void RegisterLight(plLightInfo* light) override;
+    void UnRegisterLight(plLightInfo* light) override;
+
 private:
     VertexUniforms* fCurrentRenderPassUniforms;
+    plMaterialLightingDescriptor fCurrentRenderPassMaterialLighting;
     
     bool fIsFullscreen;
 
     void FindFragFunction();
 
     void ISelectLights(const plSpan* span, plMetalMaterialShaderRef* mRef, bool proj = false);
-    void IEnableLight(size_t i, plLightInfo* light);
-    void IDisableLight(size_t i);
-    void IScaleLight(size_t i, float scale);
+    void ILoadLight(plLightInfo* light);
+    void IScaleLight(plLightInfo* light, float scale);
+    void LoadLightsOnDevice();
     void ICalcLighting(plMetalMaterialShaderRef* mRef, const plLayerInterface* currLayer, const plSpan* currSpan);
+    hsGDeviceRef* IMakeLightRef(plLightInfo* owner);
     void IHandleBlendMode(hsGMatState flags);
     void IHandleZMode(hsGMatState flags);
 
@@ -236,13 +242,14 @@ private:
     void                   ISetupShadowRcvTextureStages(hsGMaterial* mat);
     void                   ISetupShadowSlaveTextures(plShadowSlave* slave); 
     void                   ISetupShadowState(plShadowSlave* slave, plShadowState& shadowState);
-    void                   IDisableLightsForShadow();
     void                   IReleaseRenderTargetPools();
     void                   IRenderProjectionEach(const plRenderPrimFunc& render, hsGMaterial* material, int iPass, const plSpan& span, const plMetalVertexBufferRef* vRef);
     void                   IRenderProjections(const plRenderPrimFunc& render, const plMetalVertexBufferRef* vRef);
     void                   IRenderProjection(const plRenderPrimFunc& render, plLightInfo* li, const plMetalVertexBufferRef* vRef);
 
     void ISetLayer(uint32_t lay);
+    
+    void ISetEnablePerPixelLighting(const bool enable);
 
     // Shadows
     std::vector<plRenderTarget*> fRenderTargetPool512;
@@ -261,14 +268,21 @@ private:
 
     uint32_t fCurrRenderLayer;
 
-    void                        PushCurrentLightSources();
-    void                        PopCurrentLightSources();
-    plMetalLights               fLights;
-    std::vector<plMetalLights*> fLightSourceStack;
+    void                        SaveCurrentLightSources();
+    void                        RestoreCurrentLightSources();
+    void                        IBindLights();
+
+    std::vector<plMetalShaderActiveLight>*             fLights;
+    bool                                               fLightingPerPixel;
+    std::vector<std::vector<plMetalShaderActiveLight>> fLightSourceStack;
 
     static plMetalEnumerate enumerator;
 
     plTextFont* fTextFontRefList;
+    plMetalLightRef* fLightRefList;
+    bool fLightsDirty;
+
+    MTL::Buffer* fLightBuffers[3];
 
     NS::AutoreleasePool* fCurrentPool;
 
@@ -284,10 +298,12 @@ private:
             hsGMatState::hsGMatClampFlags clampFlag;
         } layerStates[8];
 
-        std::optional<MTL::CullMode>    fCurrentCullMode;
-        const MTL::RenderPipelineState* fCurrentPipelineState;
-        MTL::Buffer*                    fCurrentVertexBuffer;
-        MTL::DepthStencilState*         fCurrentDepthStencilState;
+        std::optional<MTL::CullMode>                   fCurrentCullMode;
+        const MTL::RenderPipelineState*                fCurrentPipelineState;
+        MTL::Buffer*                                   fCurrentVertexBuffer;
+        MTL::DepthStencilState*                        fCurrentDepthStencilState;
+        std::optional<plMaterialLightingDescriptor>    fBoundMaterialProperties;
+        std::optional<VertexUniforms>                  fCurrentVertexUniforms;
 
         void Reset();
     } fState;

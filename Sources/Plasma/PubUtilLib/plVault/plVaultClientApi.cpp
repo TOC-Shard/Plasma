@@ -39,15 +39,30 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
       Mead, WA   99021
 
 *==LICENSE==*/
-/*****************************************************************************
-*
-*   $/Plasma20/Sources/Plasma/PubUtilLib/plVault/plVaultClientApi.cpp
-*   
-***/
 
+#include "plVaultClientApi.h"
 
-#include "Pch.h"
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <string_theory/string_stream>
+#include <thread>
+#include <unordered_map>
 
+#include "hsTimer.h"
+#include "plgDispatch.h"
+
+#include "plMessage/plVaultNotifyMsg.h"
+#include "plNetClientComm/plNetClientComm.h"
+#include "plNetCommon/plNetCommon.h"
+#include "plNetCommon/plNetServerSessionInfo.h"
+#include "plNetCommon/plSpawnPointInfo.h"
+#include "plNetGameLib/plNglCore.h"
+#include "plNetGameLib/plNglAuth.h"
+#include "plSDL/plSDL.h"
+#include "plStatusLog/plStatusLog.h"
+
+#include "plVaultNodeAccess.h"
 
 /*****************************************************************************
 *
@@ -2865,14 +2880,14 @@ bool VaultAmCzarOfAge (const plUUID& ageInstId) {
 
 //============================================================================
 bool VaultRegisterMTStation(
-    const ST::string& stationName,
-    const ST::string& linkBackSpawnPtObjName
+    ST::string stationName,
+    ST::string linkBackSpawnPtObjName
 ) {
     plAgeInfoStruct info;
     info.SetAgeFilename(kCityAgeFilename);
     if (hsRef<RelVaultNode> rvn = VaultGetOwnedAgeLink(&info)) {
         VaultAgeLinkNode link(rvn);
-        link.AddSpawnPoint({ stationName, linkBackSpawnPtObjName });
+        link.AddSpawnPoint({std::move(stationName), std::move(linkBackSpawnPtObjName)});
         return true;
     }
     return false;

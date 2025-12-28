@@ -39,23 +39,28 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
       Mead, WA   99021
 
 *==LICENSE==*/
-/*****************************************************************************
-*
-*   $/Plasma20/Sources/Plasma/NucleusLib/pnNetCli/pnNcCli.cpp
-*   
-***/
 
-#include "Pch.h"
+#include "pnNetCli.h"
 
+#include "hsEndian.h"
+#include "hsLockGuard.h"
 #include "hsWindows.h"
+
+#include "pnAsyncCore/pnAcIo.h"
+#include "pnAsyncCore/pnAcLog.h"
+#include "pnEncryption/plBigNum.h"
 #include "pnEncryption/plChallengeHash.h"
 #include "pnEncryption/plEncryption.h"
-#include "pnUUID/pnUUID.h"
-#include "hsLockGuard.h"
+#include "pnNetBase/pnNbConst.h"
+
+#include <algorithm>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <string_theory/format>
 #include <utility>
+
+#include "Intern.h"
 
 #ifdef HS_DEBUGGING
 # define NCCLI_LOG  LogMsg

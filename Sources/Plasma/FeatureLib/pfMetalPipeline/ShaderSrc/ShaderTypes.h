@@ -54,30 +54,35 @@ typedef __attribute__((__ext_vector_type__(3))) half half3;
 typedef __attribute__((__ext_vector_type__(4))) half half4;
 #endif
 
-enum plMetalVertexShaderArgument
+enum plMetalShaderArgument
 {
     /// Material State
-    VertexShaderArgumentFixedFunctionUniforms           = 2,
+    VertexShaderArgumentFixedFunctionUniforms = 2,
     /// Uniform table for Plasma dynamic shaders
-    VertexShaderArgumentMaterialShaderUniforms          = 3,
+    VertexShaderArgumentMaterialShaderUniforms = 3,
     /// Light Table
-    VertexShaderArgumentLights                          = 4,
+    ShaderLights = 4,
+    /// Material properties for vertex lighting
+    VertexShaderArgumentMaterialLighting = 5,
     /// Blend matrix for GPU side animation blending
-    VertexShaderArgumentBlendMatrix1                    = 6,
+    VertexShaderArgumentBlendMatrix1 = 6,
     /// Describes the state of a shadow caster for shadow cast shader
-    VertexShaderArgumentShadowState                     = 9
-};
+    VertexShaderArgumentShadowState = 9,
+    /// Table of active light indices/strengths for the material to be rendered
+    ShaderActiveLights = 12,
+    /// Count of the active lights for the material to be rendered
+    ShaderActiveLightCount = 13,
 
-enum plMetalFragmentShaderArgumentIndex
-{
     /// Texture is a legacy argument for the simpler plate shader
-    FragmentShaderArgumentTexture                       = 1,
+    FragmentShaderArgumentTexture = 1,
     /// Fragment uniforms
-    FragmentShaderArgumentShadowCastUniforms            = 4,
+    FragmentShaderArgumentShadowCastUniforms = 4,
     /// Legacy argument buffer
-    FragmentShaderArgumentUniforms                      = 5,
+    FragmentShaderArgumentUniforms = 5,
     /// Layer index of alpha for shadow fragment shader
-    FragmentShaderArgumentShadowCastAlphaSrc            = 8
+    FragmentShaderArgumentShadowCastAlphaSrc = 8,
+    /// Material properties for vertex lighting
+    FragmentShaderArgumentMaterialLighting = 10,
 };
 
 enum plMetalVertexAttribute
@@ -110,6 +115,8 @@ enum plMetalFunctionConstant
     FunctionConstantLayerFlags                          = 18,
     /// Numbrer of weights in the FVF vertex layout.
     FunctionConstantNumWeights                          = 26,
+    /// Per pixel lighting enable flag
+    FunctionConstantPerPixelLighting                    = 27,
 };
 
 enum plMetalLayerPassType: uint8_t
@@ -154,7 +161,18 @@ struct plMetalShaderLightSource
     __fp16 constAtten;
     __fp16 linAtten;
     __fp16 quadAtten;
+};
+
+struct plMetalShaderActiveLight
+{
+    uint index;
     __fp16 scale;
+    
+    plMetalShaderActiveLight(uint indexIn, float scaleIn)
+    {
+        index = indexIn;
+        scale = scaleIn;
+    }
 };
 #ifndef __METAL_VERSION__
 static_assert(std::is_trivial_v<plMetalShaderLightSource>, "plMetalShaderLightSource must be a trivial type!");
@@ -169,15 +187,8 @@ struct UVOutDescriptor
 static_assert(std::is_trivial_v<UVOutDescriptor>, "UVOutDescriptor must be a trivial type!");
 #endif
 
-struct VertexUniforms
+struct plMaterialLightingDescriptor
 {
-    // transformation
-    matrix_float4x4 projectionMatrix;
-    matrix_float4x4 localToWorldMatrix;
-    matrix_float4x4 cameraToWorldMatrix;
-    matrix_float4x4 worldToCameraMatrix;
-
-    // lighting
     half4 globalAmb;
     half3 ambientCol;
     uint8_t ambientSrc;
@@ -187,7 +198,24 @@ struct VertexUniforms
     uint8_t emissiveSrc;
     half3 specularCol;
     uint8_t specularSrc;
-    bool invVtxAlpha;
+    
+    bool invertAlpha;
+    
+#ifndef __METAL_VERSION__
+    bool operator==(const plMaterialLightingDescriptor& rhs) const
+    {
+        return memcmp(this, &rhs, sizeof(plMaterialLightingDescriptor)) == 0;
+    }
+#endif
+};
+
+struct VertexUniforms
+{
+    // transformation
+    matrix_float4x4 projectionMatrix;
+    matrix_float4x4 localToWorldMatrix;
+    matrix_float4x4 cameraToWorldMatrix;
+    matrix_float4x4 worldToCameraMatrix;
 
     uint8_t fogExponential;
     simd::float2 fogValues;
@@ -198,20 +226,16 @@ struct VertexUniforms
     float3 sampleLocation(size_t index, thread float3 *texCoords, const float4 cameraSpaceNormal, const float4 camPosition) constant;
     half4 calcFog(float4 camPosition) constant;
 #endif
+    
+#ifndef __METAL_VERSION__
+    bool operator==(const VertexUniforms& rhs) const
+    {
+        return memcmp(this, &rhs, sizeof(VertexUniforms)) == 0;
+    }
+#endif
 };
 #ifndef __METAL_VERSION__
 static_assert(std::is_trivial_v<VertexUniforms>, "VertexUniforms must be a trivial type!");
-#endif
-
-#define kMetalMaxLightCount 32
-
-struct plMetalLights
-{
-    uint8_t count;
-    plMetalShaderLightSource lampSources[kMetalMaxLightCount];
-};
-#ifndef __METAL_VERSION__
-static_assert(std::is_trivial_v<plMetalLights>, "plMetalLights must be a trivial type!");
 #endif
 
 struct plShadowState

@@ -39,16 +39,15 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
       Mead, WA   99021
 
 *==LICENSE==*/
-/*****************************************************************************
-*
-*   $/Plasma20/Sources/Plasma/NucleusLib/pnNetCli/pnNcChannel.cpp
-*   
-***/
 
-#include "Pch.h"
+#include "pnNetCli.h"
 
 #include "hsRefCnt.h"
 
+#include "pnEncryption/plBigNum.h"
+#include "pnNetBase/pnNbKeys.h"
+
+#include "Intern.h"
 
 namespace pnNetCli {
 

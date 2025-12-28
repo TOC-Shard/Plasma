@@ -320,10 +320,10 @@ plPythonFileMod::~plPythonFileMod()
         PyObject* m;
         PyObject* modules = PyImport_GetModuleDict();
         if (modules && (m = PyDict_GetItemString(modules, fModuleName.c_str())) && PyModule_Check(m)) {
-            hsStatusMessageF("Module %s removed from python dictionary", fModuleName.c_str());
+            hsStatusMessageF("Module {} removed from python dictionary", fModuleName);
             PyDict_DelItemString(modules, fModuleName.c_str());
         } else {
-            hsStatusMessageF("Module %s not found in python dictionary. Already removed?",fModuleName.c_str());
+            hsStatusMessageF("Module {} not found in python dictionary. Already removed?", fModuleName);
         }
     }
 }
@@ -1552,13 +1552,21 @@ bool plPythonFileMod::MsgReceive(plMessage* msg)
         int msgType = plAIMsg::kAIMsg_Unknown;
         pyObjectRef args;
 
-        if (plAIBrainCreatedMsg::ConvertNoRef(aiMsg))
+        if (plAIBrainCreatedMsg::ConvertNoRef(aiMsg)) {
             msgType = plAIMsg::kAIMsg_BrainCreated;
-        plAIArrivedAtGoalMsg* arrivedMsg = plAIArrivedAtGoalMsg::ConvertNoRef(aiMsg);
-        if (arrivedMsg) {
+        } else if (auto* arrivedMsg = plAIArrivedAtGoalMsg::ConvertNoRef(aiMsg)) {
             msgType = plAIMsg::kAIMsg_ArrivedAtGoal;
             args = PyTuple_New(1);
             PyTuple_SetItem(args.Get(), 0, pyPoint3::New(arrivedMsg->Goal()));
+        } else if (plAIBrainDestroyedMsg::ConvertNoRef(aiMsg)) {
+            msgType = plAIMsg::kAIMsg_BrainDestroyed;
+        } else if (auto* goToMsg = plAIGoToGoalMsg::ConvertNoRef(aiMsg)) {
+            msgType = plAIMsg::kAIMsg_GoToGoal;
+            args = plPython::ConvertFrom(
+                plPython::ToTuple,
+                pyPoint3::New(goToMsg->Goal()),
+                goToMsg->AvoidingAvatars()
+            );
         }
 
         // if no args were set, simply set to none

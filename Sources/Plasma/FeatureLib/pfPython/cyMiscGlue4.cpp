@@ -316,8 +316,7 @@ PYTHON_GLOBAL_METHOD_DEFINITION(PtRebuildCameraStack, args, "Params: name,ageNam
         PyErr_SetString(PyExc_TypeError, "PtRebuildCameraStack expects two strings");
         PYTHON_RETURN_ERROR;
     }
-    cyMisc::RebuildCameraStack(name, ageName);
-    PYTHON_RETURN_NONE;
+    return cyMisc::RebuildCameraStack(name, ageName);
 }
 
 PYTHON_BASIC_GLOBAL_METHOD_DEFINITION(PtRecenterCamera, cyMisc::RecenterCamera, "re-centers the camera")
@@ -618,17 +617,18 @@ PYTHON_GLOBAL_METHOD_DEFINITION_NOARGS(PtGetSupportedDisplayModes, "Returns a li
 {
     std::vector<plDisplayMode> res;
     cyMisc::GetSupportedDisplayModes(&res);
-    PyObject *retVal = PyList_New(0);
-    for (std::vector<plDisplayMode>::iterator curArg = res.begin(); curArg != res.end(); ++curArg)
-    {
-        PyObject* tup = PyTuple_New(2);
-        PyTuple_SetItem(tup, 0, PyLong_FromLong((long)(*curArg).Width));
-        PyTuple_SetItem(tup, 1, PyLong_FromLong((long)(*curArg).Height));
 
-        PyList_Append(retVal, tup);
+    PyObject* retVal = PyList_New(res.size());
+    for (size_t i = 0; i < res.size(); i++) {
+        PyObject* tup = PyTuple_New(2);
+        PyTuple_SET_ITEM(tup, 0, PyLong_FromLong((long)res[i].Width));
+        PyTuple_SET_ITEM(tup, 1, PyLong_FromLong((long)res[i].Height));
+
+        PyList_SET_ITEM(retVal, i, tup);
     }
     return retVal;
 }
+
 PYTHON_GLOBAL_METHOD_DEFINITION_NOARGS(PtGetDesktopWidth, "Returns desktop width")
 {
     return PyLong_FromLong((long)cyMisc::GetDesktopWidth());
