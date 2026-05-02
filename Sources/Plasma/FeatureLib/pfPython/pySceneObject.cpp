@@ -1006,6 +1006,11 @@ void pySceneObject::SetNetStream(const ST::string& url, float volume, float minD
     plgAudioSys::SetNetworkStreamPosition(pos.fX, pos.fY, pos.fZ, minDist, maxDist);
 }
 
+void pySceneObject::StopNetStream()
+{
+    plgAudioSys::StopNetworkStream();
+}
+
 void pySceneObject::VolumeSensorIgnoreExtraEnters(bool ignore)
 {
     if (!fSceneObjects.empty())

@@ -467,6 +467,8 @@ PYTHON_METHOD_DEFINITION(ptSceneobject, setNetStream, args)
     PYTHON_RETURN_NONE;
 }
 
+PYTHON_BASIC_METHOD_DEFINITION(ptSceneobject, stopNetStream, StopNetStream)
+
 PYTHON_METHOD_DEFINITION(ptSceneobject, volumeSensorIgnoreExtraEnters, args)
 {
     char ignore;
@@ -548,6 +550,7 @@ PYTHON_START_METHODS_TABLE(ptSceneobject)
     PYTHON_METHOD(ptSceneobject, setSoundFilename, "Params: index, filename, isCompressed\nSets the sound attached to this sceneobject to use the specified sound file."),
     PYTHON_METHOD(ptSceneobject, getSoundIndex, "Params: sndComponentName\nGet the index of the requested sound component"),
     PYTHON_METHOD(ptSceneobject, setNetStream, "Params: url[, volume[, minDist[, maxDist]]]\nStarts a live HTTP/MP3 audio stream at this object's 3D position."),
+    PYTHON_BASIC_METHOD(ptSceneobject, stopNetStream, "Stops the network audio stream started by setNetStream."),
 
     PYTHON_METHOD(ptSceneobject, volumeSensorIgnoreExtraEnters, "Params: ignore\nTells the volume sensor attached to this object to ignore extra enters (default), or not (hack for garrison)."),
     PYTHON_METHOD(ptSceneobject, volumeSensorNoArbitration, "Params: noArbitration\nTells the volume sensor attached to this object whether or not to negotiate exclusive locks with the server."),

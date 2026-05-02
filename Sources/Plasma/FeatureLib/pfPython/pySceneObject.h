@@ -195,6 +195,7 @@ public:
     void SetSoundFilename(int index, const ST::string& filename, bool isCompressed);
     int GetSoundObjectIndex(const ST::string& sndObj);
     void SetNetStream(const ST::string& url, float volume = 1.0f, float minDist = 15.f, float maxDist = 10000.f);
+    void StopNetStream();
 
     // hack for garrison
     void VolumeSensorIgnoreExtraEnters(bool ignore);
