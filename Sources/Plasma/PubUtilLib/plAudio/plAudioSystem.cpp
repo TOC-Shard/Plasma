@@ -801,6 +801,7 @@ bool plAudioSystem::MsgReceive(plMessage* msg)
         if(!pALMsg->fLoaded) {
             fLastPos = fCurrListenerPos;
             fListenerInit = false;
+            plgAudioSys::StopNetworkStream();
         } else {
             fListenerInit = true;
         }
