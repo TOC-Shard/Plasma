@@ -60,6 +60,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "plDSoundBuffer.h"
 #include "plEAXEffects.h"
 #include "plEAXListenerMod.h"
+#include "plNetworkAudioStream.h"
 #include "plSound.h"
 #include "plVoiceChat.h"
 
@@ -769,6 +770,8 @@ bool plAudioSystem::MsgReceive(plMessage* msg)
         //if (fListener)
         {
             plProfile_BeginLap(AudioUpdate, this->GetKey()->GetUoid().GetObjectName());
+            if (plgAudioSys::fNetStream)
+                plgAudioSys::fNetStream->Update();
             if (hsTimer::GetMilliSeconds() - fLastUpdateTimeMs > UPDATE_TIME_MS) {
                 IUpdateSoftSounds(fCurrListenerPos);
 
@@ -918,7 +921,8 @@ ST::string      plgAudioSys::fPlaybackDeviceName = kDefaultDeviceMagic;
 ST::string      plgAudioSys::fCaptureDeviceName = kDefaultDeviceMagic;
 bool            plgAudioSys::fRestarting = false;
 bool            plgAudioSys::fMutedStateChange = false;
-uint32_t        plgAudioSys::fCaptureSampleRate = FREQUENCY;
+uint32_t              plgAudioSys::fCaptureSampleRate = FREQUENCY;
+plNetworkAudioStream* plgAudioSys::fNetStream = nullptr;
 
 void plgAudioSys::Init()
 {
@@ -1245,4 +1249,42 @@ bool plgAudioSys::SetCaptureVolume(float pct)
     if (fSys)
         return fSys->fCaptureLevel->SetVolume(pct);
     return false;
+}
+
+bool plgAudioSys::PlayNetworkStream(const ST::string& url, float volume, bool positional)
+{
+    StopNetworkStream();
+    fNetStream = new plNetworkAudioStream();
+    if (!fNetStream->Open(url, volume, positional)) {
+        delete fNetStream;
+        fNetStream = nullptr;
+        return false;
+    }
+    return true;
+}
+
+void plgAudioSys::StopNetworkStream()
+{
+    if (fNetStream) {
+        fNetStream->Close();
+        delete fNetStream;
+        fNetStream = nullptr;
+    }
+}
+
+void plgAudioSys::SetNetworkStreamVolume(float volume)
+{
+    if (fNetStream)
+        fNetStream->SetVolume(volume);
+}
+
+void plgAudioSys::SetNetworkStreamPosition(float x, float y, float z, float minDist, float maxDist)
+{
+    if (fNetStream)
+        fNetStream->SetPosition(x, y, z, minDist, maxDist);
+}
+
+bool plgAudioSys::IsNetworkStreamPlaying()
+{
+    return fNetStream && fNetStream->IsPlaying();
 }

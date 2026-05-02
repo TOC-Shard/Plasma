@@ -61,6 +61,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 
 class plWAVHeader;
 class plAudioFileReader;
+class plSoundDeswizzler;
 
 
 // Ported to OpenAL from DirectSound May 2006. Idealy the openal sources would be seperate from this class.
@@ -99,10 +100,10 @@ public:
     bool        FillBuffer(void *data, unsigned bytes, plWAVHeader *header);
 
     // Streaming support
-    bool        SetupStreamingSource(plAudioFileReader *stream);
+    bool        SetupStreamingSource(plAudioFileReader *stream, plSoundDeswizzler *deswizzler = nullptr);
     bool        SetupStreamingSource(void *data, unsigned bytes);
     int         BuffersProcessed();
-    bool        StreamingFillBuffer(plAudioFileReader *stream);
+    bool        StreamingFillBuffer(plAudioFileReader *stream, plSoundDeswizzler *deswizzler = nullptr);
 
     bool        SetupVoiceSource();
     bool        VoiceFillBuffer(const void *data, size_t bytes, unsigned buferId);

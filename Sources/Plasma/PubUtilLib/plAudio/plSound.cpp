@@ -190,9 +190,12 @@ void plSound::FastForwardToggle()
 //  Our basic play function. Marks the sound as playing, and if we're actually
 //  allowed to play, will actually start the sound playing as well.
 void plSound::Play()
-{   
+{
     if(fLoading)    // if we are loading there is no reason to do this. Play will be called, by Update(), once the data is loaded and this floag is set to false
+    {
+        fPlayWhenLoaded = true;
         return;
+    }
 
     if( !fActive )
     {

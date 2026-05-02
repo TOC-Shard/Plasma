@@ -45,6 +45,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include <string_theory/format>
 
 #include "plAudible.h"
+#include "plAudio/plAudioSystem.h"
 #include "plgDispatch.h"
 
 #include "pnMessage/plCameraMsg.h"
@@ -992,6 +993,17 @@ int pySceneObject::GetSoundObjectIndex(const ST::string& sndObj)
     }
 
     return -1;
+}
+
+void pySceneObject::SetNetStream(const ST::string& url, float volume, float minDist, float maxDist)
+{
+    plSceneObject* obj = fSceneObjects.empty() ? nullptr
+        : plSceneObject::ConvertNoRef(fSceneObjects[0]->ObjectIsLoaded());
+    if (!obj)
+        return;
+    hsPoint3 pos = obj->GetLocalToWorld().GetTranslate();
+    plgAudioSys::PlayNetworkStream(url, volume, true);
+    plgAudioSys::SetNetworkStreamPosition(pos.fX, pos.fY, pos.fZ, minDist, maxDist);
 }
 
 void pySceneObject::VolumeSensorIgnoreExtraEnters(bool ignore)

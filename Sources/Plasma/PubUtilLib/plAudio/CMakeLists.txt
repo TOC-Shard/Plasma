@@ -4,6 +4,7 @@ set(plAudio_SOURCES
     plDSoundBuffer.cpp
     plEAXEffects.cpp
     plEAXListenerMod.cpp
+    plNetworkAudioStream.cpp
     plSound.cpp
     plSoundEvent.cpp
     plVoiceChat.cpp
@@ -24,6 +25,7 @@ set(plAudio_HEADERS
     plEAXEffects.h
     plEAXListenerMod.h
     plEAXStructures.h
+    plNetworkAudioStream.h
     plSound.h
     plSoundEvent.h
     plVoiceChat.h
@@ -64,6 +66,8 @@ target_link_libraries(plAudio
         plStatusLog
         $<$<BOOL:${USE_OPUS}>:Opus::opus>
         $<$<BOOL:${USE_SPEEX}>:Speex::speex>
+        $<$<BOOL:${USE_MPG123}>:MPG123::libmpg123>
+        $<$<BOOL:${USE_MPG123}>:CURL::libcurl>
     INTERFACE
         pnFactory
 )

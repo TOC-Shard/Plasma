@@ -39,36 +39,38 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
       Mead, WA   99021
 
 *==LICENSE==*/
-//////////////////////////////////////////////////////////////////////////////
-//                                                                          //
-//  plSoundDeswizzler - Quick helper class to extract a single channel of   //
-//                      data from stereo (or more)-channel data.            //
-//                                                                          //
-//////////////////////////////////////////////////////////////////////////////
+#ifndef plMP3Codec_h
+#define plMP3Codec_h
 
-#ifndef _plSoundDeswizzler_h
-#define _plSoundDeswizzler_h
+#include "plAudioFileReader.h"
+#include "plAudioCore.h"
 
-#include "HeadSpin.h"
+#include <cstdint>
 
+struct mpg123_handle_struct;
 
-//// Class Definition ////////////////////////////////////////////////////////
-
-class plSoundDeswizzler
+class plMP3Codec : public plAudioFileReader
 {
 public:
-    plSoundDeswizzler( void *srcPtr, uint32_t srcLength, uint8_t numChannels, uint32_t sampleSize );
-    plSoundDeswizzler( uint32_t srcLength, uint8_t numChannels, uint32_t sampleSize );
-    ~plSoundDeswizzler();
+    plMP3Codec(const plFileName& path, plAudioCore::ChannelSelect whichChan);
+    ~plMP3Codec();
 
-    void    *GetSourceBuffer() const { return fData; }
-    void    Extract( uint8_t channelSelect, void *destPtr, uint32_t numBytesToProcess = 0 );
-    uint8_t  GetNumChannels() const { return static_cast<uint8_t>(fStride / fSampleSize); }
+    plWAVHeader& GetHeader() override { return fHeader; }
 
-protected:
-    uint8_t   *fData;
-    uint32_t  fNumSamples, fSampleSize, fStride;
-    bool    fOwnsData;
+    void     Close() override;
+    uint32_t GetDataSize() override;
+    float    GetLengthInSecs() override;
+    bool     SetPosition(uint32_t numBytes) override;
+    bool     Read(uint32_t numBytes, void* buffer) override;
+    uint32_t NumBytesLeft() override;
+    bool     IsValid() override { return fValid; }
+
+private:
+    mpg123_handle_struct* fHandle = nullptr;
+    plWAVHeader           fHeader;
+    int64_t               fTotalSamples = 0;  // 0 = unknown length
+    bool                  fValid = false;
+    bool                  fEOF = false;
 };
 
-#endif //_plSoundDeswizzler_h
+#endif // plMP3Codec_h

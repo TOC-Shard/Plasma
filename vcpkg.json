@@ -46,7 +46,9 @@
         "name": "libuuid",
         "platform": "linux"
       },
-      "zlib"
+      "zlib",
+      "minizip",
+      "mpg123"
     ],
     "overrides": [
       {

@@ -40,6 +40,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 
 *==LICENSE==*/
 #include "HeadSpin.h"
+#include <vector>
 #include "hsTimer.h"
 #include "hsGeometry3.h"
 #include "plgDispatch.h"
@@ -295,9 +296,16 @@ bool plWin32StreamingSound::LoadSound( bool is3D )
     if (!fDataBuffer)
         return false;
 
+    // Check if the source has more channels than the OpenAL buffer (e.g. stereo MP3 as 3D sound).
+    // If so, a deswizzler is needed to extract one channel before feeding data to OpenAL.
+    const uint8_t srcCh  = static_cast<uint8_t>(fDataStream->GetHeader().fNumChannels);
+    const uint8_t dstCh  = static_cast<uint8_t>(header.fNumChannels);
+    const uint8_t smplSz = static_cast<uint8_t>(header.fBitsPerSample / 8);
+    const bool needsDsw  = srcCh != dstCh;
+
     bool setupSource = true;
     if (!fDataBuffer->GetData() || fStartPos)
-    { 
+    {
         if(fStartPos && fStartPos <= fDataStream->NumBytesLeft())
         {
             fDataStream->SetPosition(fStartPos);
@@ -305,17 +313,29 @@ bool plWin32StreamingSound::LoadSound( bool is3D )
         }
 
         // if we get here we are not starting from the beginning of the sound. We still have an audio loaded and need to pick up where we left off
-        if(!fDSoundBuffer->SetupStreamingSource(fDataStream))
-        {
+        plSoundDeswizzler *tmpDsw = needsDsw ? new plSoundDeswizzler(STREAM_BUFFER_SIZE, srcCh, smplSz) : nullptr;
+        if(!fDSoundBuffer->SetupStreamingSource(fDataStream, tmpDsw))
             setupSource = false;
-        }
+        delete tmpDsw;
     }
     else
     {
         // this sound is starting from the beginning. Get the data and start it.
-        if (!fDSoundBuffer->SetupStreamingSource(fDataBuffer->GetData(), fDataBuffer->GetAsyncLoadLength()))
+        if (needsDsw)
         {
-            setupSource = false;
+            // Deswizzle the preloaded stereo data to mono before handing it to OpenAL.
+            const uint32_t stereoBytes = fDataBuffer->GetAsyncLoadLength();
+            const uint32_t monoBytes   = stereoBytes / srcCh;
+            std::vector<uint8_t> monoData(monoBytes);
+            plSoundDeswizzler dsw(fDataBuffer->GetData(), stereoBytes, srcCh, smplSz);
+            dsw.Extract(0, monoData.data(), stereoBytes);
+            if (!fDSoundBuffer->SetupStreamingSource(monoData.data(), monoBytes))
+                setupSource = false;
+        }
+        else
+        {
+            if (!fDSoundBuffer->SetupStreamingSource(fDataBuffer->GetData(), fDataBuffer->GetAsyncLoadLength()))
+                setupSource = false;
         }
     }
     
@@ -380,7 +400,7 @@ void plWin32StreamingSound::IStreamUpdate()
             return;
         }
 
-        if(!fDSoundBuffer->StreamingFillBuffer(fDataStream))
+        if(!fDSoundBuffer->StreamingFillBuffer(fDataStream, fDeswizzler))
         {
             plStatusLog::AddLineSF("audio.log", "{} Streaming buffer fill failed", GetKeyName());
         }

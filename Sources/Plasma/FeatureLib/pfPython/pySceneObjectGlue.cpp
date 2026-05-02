@@ -452,6 +452,21 @@ PYTHON_METHOD_DEFINITION(ptSceneobject, getSoundIndex, args)
     return PyLong_FromLong((long)self->fThis->GetSoundObjectIndex(sndComponentName));
 }
 
+PYTHON_METHOD_DEFINITION(ptSceneobject, setNetStream, args)
+{
+    ST::string url;
+    float volume = 1.0f;
+    float minDist = 15.f;
+    float maxDist = 10000.f;
+    if (!PyArg_ParseTuple(args, "O&|fff", PyUnicode_STStringConverter, &url, &volume, &minDist, &maxDist))
+    {
+        PyErr_SetString(PyExc_TypeError, "setNetStream expects a string URL, optional float volume, optional float minDist, optional float maxDist");
+        PYTHON_RETURN_ERROR;
+    }
+    self->fThis->SetNetStream(url, volume, minDist, maxDist);
+    PYTHON_RETURN_NONE;
+}
+
 PYTHON_METHOD_DEFINITION(ptSceneobject, volumeSensorIgnoreExtraEnters, args)
 {
     char ignore;
@@ -532,6 +547,7 @@ PYTHON_START_METHODS_TABLE(ptSceneobject)
 
     PYTHON_METHOD(ptSceneobject, setSoundFilename, "Params: index, filename, isCompressed\nSets the sound attached to this sceneobject to use the specified sound file."),
     PYTHON_METHOD(ptSceneobject, getSoundIndex, "Params: sndComponentName\nGet the index of the requested sound component"),
+    PYTHON_METHOD(ptSceneobject, setNetStream, "Params: url[, volume[, minDist[, maxDist]]]\nStarts a live HTTP/MP3 audio stream at this object's 3D position."),
 
     PYTHON_METHOD(ptSceneobject, volumeSensorIgnoreExtraEnters, "Params: ignore\nTells the volume sensor attached to this object to ignore extra enters (default), or not (hack for garrison)."),
     PYTHON_METHOD(ptSceneobject, volumeSensorNoArbitration, "Params: noArbitration\nTells the volume sensor attached to this object whether or not to negotiate exclusive locks with the server."),
