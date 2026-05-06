@@ -56,6 +56,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "plAudioSystem.h"
 #include "plAudioCore/plAudioCore.h"
 #include "plAudioCore/plAudioFileReader.h"
+#include "plAudioCore/plSoundDeswizzler.h"
 #include "plEAXEffects.h"
 
 #include "plProfile.h"
@@ -217,15 +218,16 @@ bool plDSoundBuffer::FillBuffer(void *data, unsigned bytes, plWAVHeader *header)
 //============================================================================
 
 // this function is used when restarting the audio system. It is needed to restart a streaming source from where it left off
-bool plDSoundBuffer::SetupStreamingSource(plAudioFileReader *stream)
+bool plDSoundBuffer::SetupStreamingSource(plAudioFileReader *stream, plSoundDeswizzler *deswizzler)
 {
     unsigned char data[STREAM_BUFFER_SIZE];
+    unsigned char mono[STREAM_BUFFER_SIZE];
     unsigned int size;
     ALenum error;
-    
-    alGetError();   
+
+    alGetError();
     int numBuffersToQueue = 0;
-    
+
     // fill buffers with data
     for( int i = 0; i < STREAMING_BUFFERS; i++ )
     {
@@ -235,9 +237,14 @@ bool plDSoundBuffer::SetupStreamingSource(plAudioFileReader *stream)
             if(IsLooping())
             {
                 stream->SetPosition(0);
+                size = stream->NumBytesLeft() < STREAM_BUFFER_SIZE ? stream->NumBytesLeft() : STREAM_BUFFER_SIZE;
+            }
+            else
+            {
+                break;  // no data and not looping; don't queue empty buffers
             }
         }
-    
+
         stream->Read(size, data);
         numBuffersToQueue++;
 
@@ -250,7 +257,17 @@ bool plDSoundBuffer::SetupStreamingSource(plAudioFileReader *stream)
         }
 
         ALenum format = IGetALFormat(fBufferDesc->fBitsPerSample, fBufferDesc->fNumChannels);
-        alBufferData( streamingBuffers[i], format, data, size, fBufferDesc->fNumSamplesPerSec );
+        void *bufPtr = data;
+        unsigned int bufSize = size;
+        if (deswizzler)
+        {
+            uint8_t srcCh = deswizzler->GetNumChannels();
+            plSoundDeswizzler chunk(data, size, srcCh, fBufferDesc->fBitsPerSample / 8);
+            chunk.Extract(0, mono, size);
+            bufPtr = mono;
+            bufSize = size / srcCh;
+        }
+        alBufferData( streamingBuffers[i], format, bufPtr, bufSize, fBufferDesc->fNumSamplesPerSec );
         if( (error = alGetError()) != AL_NO_ERROR )
             plStatusLog::AddLineS("audio.log", "alBufferData");
     }
@@ -380,7 +397,7 @@ int plDSoundBuffer::BuffersQueued()
 }
 
 //============================================================================ 
-bool plDSoundBuffer::StreamingFillBuffer(plAudioFileReader *stream)
+bool plDSoundBuffer::StreamingFillBuffer(plAudioFileReader *stream, plSoundDeswizzler *deswizzler)
 {
     if(!source)
         return false;
@@ -388,6 +405,7 @@ bool plDSoundBuffer::StreamingFillBuffer(plAudioFileReader *stream)
     ALenum error;
     ALuint bufferId;
     unsigned char data[STREAM_BUFFER_SIZE];
+    unsigned char mono[STREAM_BUFFER_SIZE];
     int buffersProcessed = BuffersProcessed();
     bool finished = false;
 
@@ -416,11 +434,22 @@ bool plDSoundBuffer::StreamingFillBuffer(plAudioFileReader *stream)
             }
 
             if(!finished)
-            {   unsigned int size = stream->NumBytesLeft() < STREAM_BUFFER_SIZE ? stream->NumBytesLeft() : STREAM_BUFFER_SIZE;
+            {
+                unsigned int size = stream->NumBytesLeft() < STREAM_BUFFER_SIZE ? stream->NumBytesLeft() : STREAM_BUFFER_SIZE;
                 stream->Read(size, data);
 
                 ALenum format = IGetALFormat(fBufferDesc->fBitsPerSample, fBufferDesc->fNumChannels);
-                alBufferData( bufferId, format, data, size, fBufferDesc->fNumSamplesPerSec );
+                void *bufPtr = data;
+                unsigned int bufSize = size;
+                if (deswizzler)
+                {
+                    uint8_t srcCh = deswizzler->GetNumChannels();
+                    plSoundDeswizzler chunk(data, size, srcCh, fBufferDesc->fBitsPerSample / 8);
+                    chunk.Extract(0, mono, size);
+                    bufPtr = mono;
+                    bufSize = size / srcCh;
+                }
+                alBufferData( bufferId, format, bufPtr, bufSize, fBufferDesc->fNumSamplesPerSec );
                 if( (error = alGetError()) != AL_NO_ERROR )
                 {
                     plStatusLog::AddLineSF("audio.log", "Failed to copy data to sound buffer {}", error);

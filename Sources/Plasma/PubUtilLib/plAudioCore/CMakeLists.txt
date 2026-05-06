@@ -3,6 +3,7 @@ set(plAudioCore_SOURCES
     plBufferedFileReader.cpp
     plCachedFileReader.cpp
     plFastWavReader.cpp
+    plMP3Codec.cpp
     plOGGCodec.cpp
     plSoundBuffer.cpp
     plSoundDeswizzler.cpp
@@ -17,6 +18,7 @@ set(plAudioCore_HEADERS
     plBufferedFileReader.h
     plCachedFileReader.h
     plFastWavReader.h
+    plMP3Codec.h
     plOGGCodec.h
     plSoundBuffer.h
     plSoundDeswizzler.h
@@ -41,6 +43,7 @@ target_link_libraries(
         Ogg::ogg
         Vorbis::vorbis
         Vorbis::vorbisfile
+        $<$<BOOL:${USE_MPG123}>:MPG123::libmpg123>
         $<$<PLATFORM_ID:Windows>:winmm>
     INTERFACE
         pnFactory

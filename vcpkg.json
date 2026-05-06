@@ -47,7 +47,8 @@
         "platform": "linux"
       },
       "tl-expected",
-      "zlib"
+      "zlib",
+      "mpg123"
     ],
     "overrides": [
       {

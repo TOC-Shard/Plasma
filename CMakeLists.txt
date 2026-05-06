@@ -141,6 +141,12 @@ find_package(tl-expected REQUIRED)
 find_package(Vorbis REQUIRED)
 find_package(VPX)
 find_package(ZLIB REQUIRED)
+find_package(mpg123 CONFIG)
+cmake_dependent_option(USE_MPG123 "Enable MP3 playback and network audio streams" ON
+    "TARGET MPG123::libmpg123" OFF)
+if(USE_MPG123)
+    add_definitions(-DUSE_MPG123)
+endif()
 
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL 4.0 AND CMAKE_CROSSCOMPILING)
     find_package(Python3 3.8 REQUIRED COMPONENTS Development)

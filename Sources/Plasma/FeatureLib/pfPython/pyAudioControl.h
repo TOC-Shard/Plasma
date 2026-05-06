@@ -153,6 +153,12 @@ public:
     ST::string GetCaptureDevice() const;
 
     std::vector<ST::string> GetCaptureDevices() const;
+
+    // Network audio streaming (requires USE_MPG123)
+    bool PlayNetStream(const ST::string& url, float volume = 1.0f);
+    void StopNetStream();
+    void SetNetStreamVolume(float volume);
+    bool IsNetStreamPlaying() const;
 };
 
 #endif // _pyAudioControl_h_

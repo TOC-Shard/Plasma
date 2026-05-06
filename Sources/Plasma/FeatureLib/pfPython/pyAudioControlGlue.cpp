@@ -384,6 +384,35 @@ PYTHON_METHOD_DEFINITION_NOARGS(ptAudioControl, getCaptureDevices)
     return tup;
 }
 
+PYTHON_METHOD_DEFINITION(ptAudioControl, playNetStream, args)
+{
+    ST::string url;
+    float volume = 1.0f;
+    if (!PyArg_ParseTuple(args, "O&|f", PyUnicode_STStringConverter, &url, &volume)) {
+        PyErr_SetString(PyExc_TypeError, "playNetStream expects a string URL and an optional float volume");
+        PYTHON_RETURN_ERROR;
+    }
+    PYTHON_RETURN_BOOL(self->fThis->PlayNetStream(url, volume));
+}
+
+PYTHON_BASIC_METHOD_DEFINITION(ptAudioControl, stopNetStream, StopNetStream)
+
+PYTHON_METHOD_DEFINITION(ptAudioControl, setNetStreamVolume, args)
+{
+    float volume;
+    if (!PyArg_ParseTuple(args, "f", &volume)) {
+        PyErr_SetString(PyExc_TypeError, "setNetStreamVolume expects a float");
+        PYTHON_RETURN_ERROR;
+    }
+    self->fThis->SetNetStreamVolume(volume);
+    PYTHON_RETURN_NONE;
+}
+
+PYTHON_METHOD_DEFINITION_NOARGS(ptAudioControl, isNetStreamPlaying)
+{
+    PYTHON_RETURN_BOOL(self->fThis->IsNetStreamPlaying());
+}
+
 PYTHON_START_METHODS_TABLE(ptAudioControl)
     PYTHON_METHOD(ptAudioControl, setSoundFXVolume, "Params: volume\nSets the SoundFX volume (0.0 to 1.0) for the game.\n"
                 "This only sets the volume for this game session."),
@@ -438,6 +467,11 @@ PYTHON_START_METHODS_TABLE(ptAudioControl)
     PYTHON_METHOD(ptAudioControl, setCaptureDevice, "Params: devicename\nSets the audio capture device by name."),
     PYTHON_METHOD_NOARGS(ptAudioControl, getCaptureDevice, "Gets the name for the capture device being used by the audio system."),
     PYTHON_METHOD_NOARGS(ptAudioControl, getCaptureDevices, "Gets the name of all available audio capture devices."),
+
+    PYTHON_METHOD(ptAudioControl, playNetStream, "Params: url[, volume]\nStarts playing a live HTTP/MP3 audio stream. Returns True on success."),
+    PYTHON_BASIC_METHOD(ptAudioControl, stopNetStream, "Stops the currently playing network audio stream."),
+    PYTHON_METHOD(ptAudioControl, setNetStreamVolume, "Params: volume\nSets the volume (0.0 to 1.0) of the network audio stream."),
+    PYTHON_METHOD_NOARGS(ptAudioControl, isNetStreamPlaying, "Returns True if a network audio stream is currently playing."),
 
 PYTHON_END_METHODS_TABLE;
 

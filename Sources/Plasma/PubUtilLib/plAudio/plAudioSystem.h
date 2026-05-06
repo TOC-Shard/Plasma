@@ -211,6 +211,13 @@ public:
      */
     static bool SetCaptureVolume(float pct);
 
+    // Network audio streaming (requires USE_MPG123)
+    static bool PlayNetworkStream(const ST::string& url, float volume = 1.0f, bool positional = false);
+    static void StopNetworkStream();
+    static void SetNetworkStreamVolume(float volume);
+    static void SetNetworkStreamPosition(float x, float y, float z, float minDist = 15.f, float maxDist = 10000.f);
+    static bool IsNetworkStreamPlaying();
+
 private:
     friend class plAudioSystem;
 
@@ -237,6 +244,7 @@ private:
     static uint32_t             fCaptureSampleRate;
     static bool                 fDisplayNumBuffers;
 
+    static class plNetworkAudioStream* fNetStream;
 };
 
 #endif //plAudioSystem_h

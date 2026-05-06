@@ -368,3 +368,23 @@ std::vector<ST::string> pyAudioControl::GetCaptureDevices() const
 {
     return plgAudioSys::GetCaptureDevices();
 }
+
+bool pyAudioControl::PlayNetStream(const ST::string& url, float volume)
+{
+    return plgAudioSys::PlayNetworkStream(url, std::max(0.f, std::min(1.f, volume)));
+}
+
+void pyAudioControl::StopNetStream()
+{
+    plgAudioSys::StopNetworkStream();
+}
+
+void pyAudioControl::SetNetStreamVolume(float volume)
+{
+    plgAudioSys::SetNetworkStreamVolume(std::max(0.f, std::min(1.f, volume)));
+}
+
+bool pyAudioControl::IsNetStreamPlaying() const
+{
+    return plgAudioSys::IsNetworkStreamPlaying();
+}

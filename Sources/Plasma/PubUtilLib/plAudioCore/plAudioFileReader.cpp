@@ -56,6 +56,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "plBufferedFileReader.h"
 #include "plCachedFileReader.h"
 #include "plFastWavReader.h"
+#include "plMP3Codec.h"
 #include "plOGGCodec.h"
 #include "plWavFile.h"
 
@@ -90,8 +91,11 @@ plAudioFileReader* plAudioFileReader::CreateReader(const plFileName& path, plAud
     }
     else if (type == kStreamRAM)
         return new plBufferedFileReader(path, whichChan);
-    else if (type == kStreamNative)
+    else if (type == kStreamNative) {
+        if (ext.compare_i("mp3") == 0)
+            return new plMP3Codec(path, whichChan);
         return new plOGGCodec(path, whichChan);
+    }
 
     return nullptr;
 }
