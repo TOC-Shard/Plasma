@@ -323,7 +323,7 @@ bool plNetworkAudioStream::IInitAL()
 
     alGenSources(1, &fALSource);
     alGenBuffers(kNumALBufs, fALBufs);
-    alSourcef(fALSource, AL_GAIN, fVolume);
+    alSourcef(fALSource, AL_GAIN, fMuted ? 0.f : fVolume);
 
     alSourcef(fALSource, AL_ROLLOFF_FACTOR, 0.3048f);  // same as all other Plasma sounds
     if (fHasPosition) {
@@ -443,8 +443,17 @@ void plNetworkAudioStream::SetVolume(float vol)
 {
     fVolume = vol;
 #ifdef USE_MPG123
-    if (fALReady)
+    if (fALReady && !fMuted)
         alSourcef(fALSource, AL_GAIN, vol);
+#endif
+}
+
+void plNetworkAudioStream::SetMuted(bool muted)
+{
+    fMuted = muted;
+#ifdef USE_MPG123
+    if (fALReady)
+        alSourcef(fALSource, AL_GAIN, muted ? 0.f : fVolume);
 #endif
 }
 

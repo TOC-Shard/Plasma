@@ -70,6 +70,7 @@ public:
 
     void  SetVolume(float vol);
     float GetVolume() const { return fVolume; }
+    void  SetMuted(bool muted);
 
     // Set 3D world-space position. Call after Open().
     // minDist: full-volume radius; maxDist: silence beyond this.
@@ -117,6 +118,7 @@ private:
     float         fMinDist = 15.f, fMaxDist = 10000.f;
     bool          fHasPosition = false;
     bool          fPositional = false;
+    bool          fMuted = false;
 
     bool IInitAL();
     void IFillAndQueueALBuf(unsigned int bufId);

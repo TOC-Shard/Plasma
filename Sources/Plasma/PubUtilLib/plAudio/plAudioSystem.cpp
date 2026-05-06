@@ -953,6 +953,9 @@ void plgAudioSys::SetMuted( bool b )
         SetGlobalFadeVolume(0.0f);
     else
         SetGlobalFadeVolume(1.0);
+
+    if (fNetStream)
+        fNetStream->SetMuted(b);
 }
 
 void plgAudioSys::SetEnableSubtitles(bool b)
@@ -1256,6 +1259,8 @@ bool plgAudioSys::PlayNetworkStream(const ST::string& url, float volume, bool po
 {
     StopNetworkStream();
     fNetStream = new plNetworkAudioStream();
+    if (fMuted)
+        fNetStream->SetMuted(true);
     if (!fNetStream->Open(url, volume, positional)) {
         delete fNetStream;
         fNetStream = nullptr;
