@@ -58,7 +58,6 @@ target_link_libraries(
         plPhysical
         plPhysX
         plPipeline
-        pfPython
         plResMgr
         plScene
         plSDL
@@ -74,6 +73,7 @@ target_link_libraries(
         pfMessage
         pfPython
         pfSurface
+        tl::expected
     INTERFACE
         pnFactory
 )

@@ -49,15 +49,12 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 
 #include "plMetalPipeline.h"
 
-void plMetalEnumerate::Enumerate(std::vector<hsG3DDeviceRecord>& records)
+void plMetalEnumerate::Enumerate(std::vector<hsG3DDeviceRecord>& records, hsDisplayHndl display)
 {
-    CGDirectDisplayID mainDisplay = CGMainDisplayID();
-    id<MTLDevice>     device = CGDirectDisplayCopyCurrentMetalDevice(mainDisplay);
+    id<MTLDevice> device = CGDirectDisplayCopyCurrentMetalDevice(display);
 
     if (device) {
         hsG3DDeviceRecord devRec;
-        devRec.SetG3DDeviceType(hsG3DDeviceSelector::kDevTypeMetal);
-        devRec.SetDriverName("Metal");
         devRec.SetDeviceDesc([device.name UTF8String]);
 
         // Metal has ways to query capabilities, but doesn't expose a flat version
@@ -75,7 +72,7 @@ void plMetalEnumerate::Enumerate(std::vector<hsG3DDeviceRecord>& records)
         devRec.SetLayersAtOnce(8);
 
         plDisplayHelper* displayHelper = plDisplayHelper::GetInstance();
-        for (const auto& mode : displayHelper->GetSupportedDisplayModes(mainDisplay)) {
+        for (const auto& mode : displayHelper->GetSupportedDisplayModes(display)) {
             hsG3DDeviceMode devMode;
             devMode.SetWidth(mode.Width);
             devMode.SetHeight(mode.Height);
@@ -125,6 +122,15 @@ void plMetalEnumerate::Enumerate(std::vector<hsG3DDeviceRecord>& records)
         }
         devRec.SetDefaultModeIndex(defaultMode - devRec.GetModes().data());
 
+        if (@available(macOS 13.0, *)) {
+            if ([device supportsFamily:MTLGPUFamilyMetal3]) {
+                devRec.SetG3DDeviceType(hsG3DDeviceSelector::kDevTypeMetal3);
+                devRec.SetDriverName("Metal 3");
+                records.emplace_back(devRec);
+            }
+        }
+        devRec.SetG3DDeviceType(hsG3DDeviceSelector::kDevTypeMetal2);
+        devRec.SetDriverName("Metal 2");
         records.emplace_back(devRec);
     }
 }

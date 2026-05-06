@@ -75,12 +75,12 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "plCmdParser.h"
 #include "pfConsoleCore/pfConsoleEngine.h"
 #include "pfConsoleCore/pfServerIni.h"
+#include "pfDisplayHelpers/plMacDisplayHelper.h"
 #include "pfGameGUIMgr/pfGameGUIMgr.h"
 #ifdef PLASMA_PIPELINE_GL
 #include "pfGLPipeline/plGLPipeline.h"
 #endif
 #include "plInputCore/plInputDevice.h"
-#include "plMacDisplayHelper.h"
 #ifdef PLASMA_PIPELINE_METAL
 #include "pfMetalPipeline/plMetalPipeline.h"
 #endif
@@ -177,6 +177,23 @@ public:
 #endif
     }
 };
+
+static uint32_t ParseRendererArgument(const ST::string& requested)
+{
+    using namespace ST::literals;
+
+    static std::unordered_map<ST::string, uint32_t, ST::hash_i, ST::equal_i> args{
+        {"metal2"_st, hsG3DDeviceSelector::kDevTypeMetal2},
+        {"metal3"_st, hsG3DDeviceSelector::kDevTypeMetal3},
+        {"opengl"_st, hsG3DDeviceSelector::kDevTypeOpenGL},
+        {"gl"_st, hsG3DDeviceSelector::kDevTypeOpenGL}
+    };
+    
+    auto it = args.find(requested);
+    if (it != args.end())
+        return it->second;
+    return hsG3DDeviceSelector::kDevTypeUnknown;
+}
 
 @interface AppDelegate : NSWindowController <NSApplicationDelegate,
                                              NSWindowDelegate,
@@ -334,7 +351,7 @@ dispatch_queue_t loadingQueue = dispatch_queue_create("", DISPATCH_QUEUE_SERIAL)
             gClient->SetFlag(plClient::kFlagSkipIntroMovies);
         gClient->WindowActivate(TRUE);
         gClient->SetMessagePumpProc(PumpMessageQueueProc);
-        gClient.Start();
+        gClient.StartClient();
     });
 
     dispatch_async(loadingQueue, ^{
@@ -447,8 +464,10 @@ dispatch_queue_t loadingQueue = dispatch_queue_create("", DISPATCH_QUEUE_SERIAL)
     plPipeline::fInitialPipeParams.TextureQuality = 2;
     // if (cmdParser.IsSpecified(kArgPvdFile))
     //    plPXSimulation::SetDefaultDebuggerEndpoint(cmdParser.GetString(kArgPvdFile));
-    // if (cmdParser.IsSpecified(kArgRenderer))
-    //     gClient.SetRequestedRenderingBackend(ParseRendererArgument(cmdParser.GetString(kArgRenderer)));
+    if (cmdParser.IsSpecified(kArgRenderer))
+        gClient.SetRequestedRenderingBackend(
+            ParseRendererArgument(cmdParser.GetString(kArgRenderer))
+        );
 #endif
 
     NetCommStartup();

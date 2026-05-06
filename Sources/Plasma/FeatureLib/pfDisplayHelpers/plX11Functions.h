@@ -40,51 +40,21 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 
 *==LICENSE==*/
 
-#include "hsExpected.h"
+#ifndef plX11Functions_h
+#define plX11Functions_h
 
-#include <gtest/gtest.h>
-#include <string_theory/string>
+#include "hsOptionalCall.h"
 
-static hsExpected<int, ST::string> ITestTrivialExNontrivialUnex(bool pass)
-{
-    if (pass)
-        return 0;
-    return hsUnexpected(ST_LITERAL("meow"));
-}
+#include <X11/Xlib.h>
+hsOptionalCallDecl("libX11", XCloseDisplay);
+hsOptionalCallDecl("libX11", XOpenDisplay);
 
-static hsExpected<ST::string, int> ITestNontrivialExTrivialUnex(bool pass)
-{
-    if (pass)
-        return ST_LITERAL("meow");
-    return hsUnexpected(-1);
-}
 
-static hsExpected<int, int> ITestTrivial(bool pass)
-{
-    if (pass)
-        return 0;
-    return hsUnexpected(-1);
-}
+#ifdef USE_XRANDR
 
-static hsExpected<ST::string, ST::string> ITestNontrivial(bool pass)
-{
-    if (pass)
-        return ST_LITERAL("pass");
-    return hsUnexpected<ST::string>("fail");
-}
+#include <X11/extensions/Xrandr.h>
+hsOptionalCallDecl("libXrandr", XRRSizes);
 
-TEST(expected, fail)
-{
-    EXPECT_FALSE(ITestTrivialExNontrivialUnex(false));
-    EXPECT_STREQ(ITestNontrivial(false).Error().c_str(), "fail");
-    EXPECT_THROW((void)ITestTrivial(false).Value(), hsBadExpectedAccess<int>);
-    EXPECT_EQ(ITestTrivial(false).Error(), -1);
-}
+#endif /* HAS_XRANDR */
 
-TEST(expected, success)
-{
-    EXPECT_TRUE(ITestTrivial(true));
-    EXPECT_EQ(*ITestTrivial(true), 0);
-    EXPECT_STREQ(ITestNontrivialExTrivialUnex(true)->c_str(), "meow");
-    EXPECT_EQ(ITestTrivialExNontrivialUnex(true).Value(), 0);
-}
+#endif /* plX11Functions_h */

@@ -194,14 +194,6 @@ public:
             }
         }
     }
-
-    void Start() override
-    {
-        if (fRedistQueue.empty())
-            OnQuit();
-        else
-            hsThread::Start();
-    }
 };
 
 // ===================================================
@@ -259,8 +251,12 @@ void plClientLauncher::IOnPatchComplete(ENetError result, const ST::string& msg)
             PatchClient();
         } else {
             // cases 2 & 3 -- update any redistributables, then launch the client.
-            fInstallerThread->fParent = this;
-            fInstallerThread->Start();
+            if (fInstallerThread->fRedistQueue.empty()) {
+                LaunchClient();
+            } else {
+                fInstallerThread->fParent = this;
+                fInstallerThread->Start();
+            }
         }
     } else if (s_errorProc)
         s_errorProc(result, msg);
@@ -303,21 +299,21 @@ void plClientLauncher::PatchClient()
     }
     hsAssert(fPatcherFactory, "why is the patcher factory nil?");
 
-    pfPatcher* patcher = fPatcherFactory();
-    patcher->OnCompletion(std::bind(&plClientLauncher::IOnPatchComplete, this, std::placeholders::_1, std::placeholders::_2));
-    patcher->OnFileDownloadDesired(std::bind(&plClientLauncher::IApproveDownload, this, std::placeholders::_1));
-    patcher->OnSelfPatch([&](const plFileName& file) { fClientExecutable = file; });
-    patcher->OnRedistUpdate([&](const plFileName& file) { fInstallerThread->fRedistQueue.push_back(file); });
+    pfPatcher patcher = fPatcherFactory();
+    patcher.OnCompletion(std::bind(&plClientLauncher::IOnPatchComplete, this, std::placeholders::_1, std::placeholders::_2));
+    patcher.OnFileDownloadDesired(std::bind(&plClientLauncher::IApproveDownload, this, std::placeholders::_1));
+    patcher.OnSelfPatch([&](const plFileName& file) { fClientExecutable = file; });
+    patcher.OnRedistUpdate([&](const plFileName& file) { fInstallerThread->fRedistQueue.push_back(file); });
 
     // Let's get 'er done.
     if (hsCheckBits(fFlags, kHaveSelfPatched)) {
         if (hsCheckBits(fFlags, kClientImage))
-            patcher->RequestManifest(plManifest::ClientImageManifest());
+            patcher.RequestManifest(plManifest::ClientImageManifest());
         else
-            patcher->RequestManifest(plManifest::ClientManifest());
+            patcher.RequestManifest(plManifest::ClientManifest());
     } else
-        patcher->RequestManifest(plManifest::PatcherManifest());
-    patcher->Start();
+        patcher.RequestManifest(plManifest::PatcherManifest());
+    patcher.Start();
 }
 
 bool plClientLauncher::CompleteSelfPatch(const std::function<void()>& waitProc) const

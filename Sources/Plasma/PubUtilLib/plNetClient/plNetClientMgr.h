@@ -76,6 +76,7 @@ class plNetClientRecorder;
 class plVaultPlayerNode;
 class plVaultAgeNode;
 class plNetVoiceListMsg;
+class plSDLModifier;
 class plStateDataRecord;
 class plCCRPetitionMsg;
 class plNetMsgPagingRoom;
@@ -249,7 +250,7 @@ public:
     void SendApplyAvatarCustomizationsMsg(const plKey msgReceiver, bool netPropagate=true, bool localPropagate=true);
 
     // plLoggable
-    bool Log(const ST::string& str) const override;
+    void Log(const ST::string& str) const override;
 
     // setters
     void SetIniAuthServer(const char * value)  { fIniAuthServer=value;}
@@ -340,6 +341,7 @@ public:
     void AddPendingLoad(PendingLoad *pl);
     const plKey& GetAgeSDLObjectKey() const { return fAgeSDLObjectKey; }
     plUoid GetAgeSDLObjectUoid(const ST::string& ageName) const override;
+    plSDLModifier* GetAgeSDLModifier() const;
     plNetClientComm& GetNetClientComm()  { return fNetClientComm; }
     ST::string GetNextAgeFilename() const;
     void SetOverrideAgeTimeOfDayPercent(float f) { fOverrideAgeTimeOfDayPercent=f;  }

@@ -84,6 +84,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "pfConsoleCore/pfConsoleEngine.h"
 #include "pfConsoleCore/pfServerIni.h"
 #include "pfCrashHandler/plCrashCli.h"
+#include "pfDisplayHelpers/plWinDisplayHelper.h"
 #include "pfPasswordStore/pfPasswordStore.h"
 
 //
@@ -185,7 +186,7 @@ void DebugMsgF(const char* format, ...);
 static void HandleDpiChange(HWND hWnd, UINT dpi, float scale, const RECT& rect)
 {
     // Inform the engine about the new DPI.
-    auto* msg = new plDisplayScaleChangedMsg(scale, plDisplayScaleChangedMsg::ConvertRect(rect));
+    auto* msg = new plDisplayScaleChangedMsg(scale, plWinDpi::ConvertRect(rect));
     msg->Send();
 }
 
@@ -1000,20 +1001,17 @@ uint32_t ParseRendererArgument(const ST::string& requested)
 {
     using namespace ST::literals;
 
-    static std::unordered_set<ST::string, ST::hash_i, ST::equal_i> dx_args {
-        "directx"_st, "direct3d"_st, "dx"_st, "d3d"_st
-    };
+    static std::unordered_map<ST::string, uint32_t, ST::hash_i, ST::equal_i> args{
+        {"directx"_st, hsG3DDeviceSelector::kDevTypeDirect3D},
+        {"direct3d"_st, hsG3DDeviceSelector::kDevTypeDirect3D},
+        {"dx"_st, hsG3DDeviceSelector::kDevTypeDirect3D},
+        {"d3d"_st, hsG3DDeviceSelector::kDevTypeDirect3D},
+        {"opengl"_st, hsG3DDeviceSelector::kDevTypeOpenGL},
+        {"gl"_st, hsG3DDeviceSelector::kDevTypeOpenGL}};
 
-    static std::unordered_set<ST::string, ST::hash_i, ST::equal_i> gl_args {
-        "opengl"_st, "gl"_st
-    };
-
-    if (dx_args.find(requested) != dx_args.end())
-        return hsG3DDeviceSelector::kDevTypeDirect3D;
-
-    if (gl_args.find(requested) != gl_args.end())
-        return hsG3DDeviceSelector::kDevTypeOpenGL;
-
+    auto it = args.find(requested);
+    if (it != args.end())
+        return it->second;
     return hsG3DDeviceSelector::kDevTypeUnknown;
 }
 
@@ -1056,6 +1054,8 @@ bool WinInit(HINSTANCE hInst)
         nullptr, nullptr, hInst, nullptr
         );
     HDC hDC = GetDC(hWnd);
+
+    plDisplayHelper::SetInstance(new plWinDisplayHelper());
 
     gClient.SetClientWindow((hsWindowHndl)hWnd);
     gClient.SetClientDisplay((hsWindowHndl)hDC);
@@ -1297,7 +1297,7 @@ int WINAPI wWinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPWSTR lpCmdLine, int 
         if (gPendingActivate)
             gClient->WindowActivate(gPendingActivateFlag);
         gClient->SetMessagePumpProc(PumpMessageQueueProc);
-        gClient.Start();
+        gClient.StartClient();
 
         // PhysX installs its own exception handler somewhere in PhysXCore.dll. Unfortunately, this code appears to suck
         // the big one. It actually makes us unable to attach with the Visual Studio debugger! We're going to override that

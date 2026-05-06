@@ -492,7 +492,8 @@ plPipeline* plClient::ICreatePipeline(hsDisplayHndl disp, hsWindowHndl hWnd, con
 #endif
     
 #ifdef PLASMA_PIPELINE_METAL
-    if (renderer == hsG3DDeviceSelector::kDevTypeMetal)
+    if (renderer == hsG3DDeviceSelector::kDevTypeMetal2 ||
+        renderer == hsG3DDeviceSelector::kDevTypeMetal3)
         return new plMetalPipeline(disp, hWnd, devMode);
 #endif
 
@@ -505,7 +506,9 @@ bool plClient::InitPipeline(hsDisplayHndl display, uint32_t devType)
 
     hsG3DDeviceModeRecord dmr;
     hsG3DDeviceSelector devSel;
-    devSel.Enumerate(fWindowHndl);
+
+    plDisplayHelper* displayHelper = plDisplayHelper::GetInstance();
+    devSel.Enumerate(displayHelper->DefaultDisplay());
     devSel.RemoveUnusableDevModes(true);
 
     if (!devSel.GetRequested(&dmr, devType))
@@ -1024,16 +1027,19 @@ void plClient::IQueueRoomLoad(const std::vector<plLocation>& locs, bool hold)
     for (int i = 0; i < locs.size(); i++)
     {
         const plLocation& loc = locs[i];
-
         const plPageInfo* info = plKeyFinder::Instance().GetLocationInfo(loc);
+        if (info == nullptr) {
+            ST::string msg = ST::format("Tried to load page with location {}, but it couldn't be found. Check that the page name in the .age file is correct and that the corresponding .prp file exists.", loc);
+            hsStatusMessage(msg);
+            hsAssert(false, msg.c_str());
+            continue;
+        }
+
         bool alreadyLoaded = (IFindRoomByLoc(loc) != -1);
         bool isLoading = IIsRoomLoading(loc);
-        if (!info || alreadyLoaded || isLoading)
-        {
+        if (alreadyLoaded || isLoading) {
             #ifdef HS_DEBUGGING
-            if (!info)
-                hsStatusMessageF("Ignoring LoadRoom request for location {#x} because we can't find the location", loc.GetSequenceNumber());
-            else if (alreadyLoaded)
+            if (alreadyLoaded)
                 hsStatusMessageF("Ignoring LoadRoom request for {}-{}, since room is already loaded", info->GetAge(), info->GetPage());
             else if (isLoading)
                 hsStatusMessageF("Ignoring LoadRoom request for {}-{}, since room is currently loading", info->GetAge(), info->GetPage());
@@ -1053,10 +1059,14 @@ void plClient::IQueueRoomLoad(const std::vector<plLocation>& locs, bool hold)
         numRooms++;
     }
 
-    if (numRooms == 0)
-        return;
-
     fNumLoadingRooms += numRooms;
+
+    if (fNumLoadingRooms == 0) {
+        hsStatusMessage("Received a load request for 0 rooms..? Assuming we're \"done loading\" a broken age with no pages.");
+        plAgeLoaded2Msg* msg = new plAgeLoaded2Msg();
+        msg->Send();
+        IStopProgress();
+    }
 }
 
 void plClient::ILoadNextRoom()
@@ -2034,7 +2044,9 @@ void plClient::IDetectAudioVideoSettings()
     bool devmode = true;
     hsG3DDeviceModeRecord dmr;
     hsG3DDeviceSelector devSel;
-    devSel.Enumerate(fWindowHndl);
+
+    plDisplayHelper* displayHelper = plDisplayHelper::GetInstance();
+    devSel.Enumerate(displayHelper->DefaultDisplay());
     devSel.RemoveUnusableDevModes(true);
 
     if (!devSel.GetDefault(&dmr))

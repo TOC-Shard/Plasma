@@ -16,6 +16,15 @@ find_program(
     DOC "Path to pngcrush"
 )
 
+if(${CMAKE_VERSION} VERSION_GREATER_EQUAL 4.0 AND CMAKE_CROSSCOMPILING)
+    set(Python3_ARTIFACTS_PREFIX "_HOST")
+    find_package(Python3 3.8 COMPONENTS Interpreter)
+endif()
+
+if(Python3_EXECUTABLE AND NOT Python3_HOST_EXECUTABLE)
+    set(Python3_HOST_EXECUTABLE "${Python3_EXECUTABLE}")
+endif()
+
 # Can we generate the resource.dat file?
 python_test_modules(
     MODULES cairosvg PIL
@@ -37,7 +46,7 @@ if(PLASMA_BUILD_RESOURCE_DAT)
 
     add_custom_command(
         OUTPUT ${external_DAT}
-        COMMAND "${Python3_EXECUTABLE}"
+        COMMAND "${Python3_HOST_EXECUTABLE}"
                 "${CMAKE_CURRENT_SOURCE_DIR}/external/makeres.py"
                 --render --package
                 ${OPTIMIZE_ARGUMENT}
@@ -92,7 +101,6 @@ if(WIN32)
 elseif(APPLE)
     list(APPEND plClient_SOURCES
         Mac-Cocoa/main.mm
-        Mac-Cocoa/plMacDisplayHelper.mm
         Mac-Cocoa/NSString+StringTheory.mm
         Mac-Cocoa/PLSKeyboardEventMonitor.mm
         Mac-Cocoa/PLSView.mm
@@ -104,7 +112,6 @@ elseif(APPLE)
     )
     list(APPEND plClient_HEADERS
         Mac-Cocoa/NSString+StringTheory.h
-        Mac-Cocoa/plMacDisplayHelper.h
         Mac-Cocoa/PLSKeyboardEventMonitor.h
         Mac-Cocoa/PLSView.h
         Mac-Cocoa/PLSLoginController.h
@@ -234,6 +241,7 @@ target_link_libraries(
         pfConsole
         pfConsoleCore
         $<$<PLATFORM_ID:Windows>:pfCrashHandler>
+        pfDisplayHelpers
         pfGameGUIMgr
         pfJournalBook
         pfLocalizationMgr
@@ -257,7 +265,7 @@ if(PLASMA_EXTERNAL_RELEASE)
     set_target_properties(plClient PROPERTIES OUTPUT_NAME "UruExplorer")
 endif(PLASMA_EXTERNAL_RELEASE)
 
-if(APPLE)
+if(APPLE AND NOT CMAKE_CROSSCOMPILING)
     # CMake will attempt to strip rpaths, thus preventing fixup_bundle from finding libraries.
     # Not sure why - turning that off.
     set_target_properties(plClient PROPERTIES INSTALL_RPATH_USE_LINK_PATH TRUE)

@@ -1315,17 +1315,18 @@ int cyMisc::GetNumRemotePlayers()
 /////////////////////////////////////////////////////////////////////////////
 //
 //  Function   : Paging functions
-//  PARAMETERS : nodeName  - name of the page to load
+//  PARAMETERS : nodeLocs - the nodes to (un)load
+//               netForce - whether to propagate the (un)load to all other players
 //  
-//  PURPOSE    : page in, hold or out a particular node
+//  PURPOSE    : page in or out one or more nodes
 //
 
-void cyMisc::PageInNodes(const std::vector<ST::string>& nodeNames, const ST::string& age, bool netForce)
+static void IPageNodes(int action, const std::vector<plLocation>& nodeLocs, bool netForce)
 {
     if (hsgResMgr::ResMgr())
     {
-        plSynchEnabler ps(false);   // disable dirty tracking while paging in
-        plClientMsg* msg = new plClientMsg(plClientMsg::kLoadRoom);
+        plSynchEnabler ps(false); // disable dirty tracking while paging
+        plClientMsg* msg = new plClientMsg(action);
         plKey clientKey = hsgResMgr::ResMgr()->FindKey(kClient_KEY);
         msg->AddReceiver(clientKey);
 
@@ -1334,29 +1335,22 @@ void cyMisc::PageInNodes(const std::vector<ST::string>& nodeNames, const ST::str
             msg->SetBCastFlag(plMessage::kNetForce);
         }
 
-        for (const auto& nodeName : nodeNames)
-            msg->AddRoomLoc(plKeyFinder::Instance().FindLocation(!age.empty() ? age : NetCommGetAge()->ageDatasetName, nodeName));
+        for (const auto& nodeLoc : nodeLocs) {
+            msg->AddRoomLoc(nodeLoc);
+        }
 
         msg->Send();
     }
 }
 
-void cyMisc::PageOutNode(const ST::string& nodeName, bool netForce)
+void cyMisc::PageInNodes(const std::vector<plLocation>& nodeLocs, bool netForce)
 {
-    if ( hsgResMgr::ResMgr() )
-    {
-        plSynchEnabler ps(false);   // disable dirty tracking while paging out
-        plClientMsg* pMsg1 = new plClientMsg(plClientMsg::kUnloadRoom);
-        plKey clientKey = hsgResMgr::ResMgr()->FindKey( kClient_KEY );
-        pMsg1->AddReceiver( clientKey );
-        pMsg1->AddRoomLoc(plKeyFinder::Instance().FindLocation("", nodeName));
+    IPageNodes(plClientMsg::kLoadRoom, nodeLocs, netForce);
+}
 
-        if (netForce) {
-            pMsg1->SetBCastFlag(plMessage::kNetPropagate);
-            pMsg1->SetBCastFlag(plMessage::kNetForce);
-        }
-        plgDispatch::MsgSend(pMsg1);
-    }
+void cyMisc::PageOutNodes(const std::vector<plLocation>& nodeLocs, bool netForce)
+{
+    IPageNodes(plClientMsg::kUnloadRoom, nodeLocs, netForce);
 }
 
 
@@ -2243,47 +2237,42 @@ PyObject* cyMisc::RebuildCameraStack(const ST::string& name, const ST::string& a
     if (name.compare("empty") == 0)
         PYTHON_RETURN_NONE;
 
-    if ( !name.empty() )
-    {
-        key=plKeyFinder::Instance().StupidSearch("", "", plSceneObject::Index(), name, false);
-    }
-    if (key == nullptr)
-    {
+    if (!name.empty())
+        key = plKeyFinder::Instance().StupidSearch("", "", plSceneObject::Index(), name, false);
+
+    if (key == nullptr) {
         // try and use this new hack method to find it
-        if (!plVirtualCam1::Instance()->RestoreFromName(name))
-        {
+        if (!plVirtualCam1::Instance()->RestoreFromName(name)) {
             // give up and force built in 3rd person
             plVirtualCam1::Instance()->PushThirdPerson();
             ST::string errmsg = ST::format("Sceneobject {} not found", name);
             PyErr_SetString(PyExc_NameError, errmsg.c_str());
             PYTHON_RETURN_ERROR;
         }
-    }
-    else
-    {
+
+        PYTHON_RETURN_NONE;
+    } else {
         // now we have the scene object, look for it's camera modifier
         const plCameraModifier1* pMod = nullptr;
         plSceneObject* pObj = plSceneObject::ConvertNoRef(key->ObjectIsLoaded());
-        if (pObj)
-        {
-            for (size_t i = 1; i < pObj->GetNumModifiers(); i++)
-            {
+        if (pObj) {
+            for (size_t i = 1; i < pObj->GetNumModifiers(); i++) {
                 pMod = plCameraModifier1::ConvertNoRef(pObj->GetModifier(i));
                 if (pMod)
                     break;
             }
-            if (pMod)
-            {   
+
+            if (pMod) {
                 plVirtualCam1::Instance()->RebuildStack(pMod->GetKey());
                 PYTHON_RETURN_NONE;
             }
         }
+
         plVirtualCam1::Instance()->PushThirdPerson();
         ST::string errmsg = ST::format("Sceneobject {} has no camera modifier", name);
         PyErr_SetString(PyExc_NameError, errmsg.c_str());
         PYTHON_RETURN_ERROR;
     }
-    
 }
 
 void cyMisc::PyClearCameraStack()

@@ -3,6 +3,7 @@ set(CoreLib_SOURCES
     hsBounds.cpp
     hsCpuID.cpp
     hsDebug.cpp
+    hsEndian.cpp
     hsExceptions.cpp
     hsExceptionStack.cpp
     hsFastMath.cpp
@@ -45,7 +46,6 @@ set(CoreLib_HEADERS
     hsEndian.h
     hsExceptions.h
     hsExceptionStack.h
-    hsExpected.h
     hsFastMath.h
     hsFILELock.h
     hsGeometry3.h
@@ -54,6 +54,7 @@ set(CoreLib_HEADERS
     hsMath.h
     hsMatrix44.h
     hsMatrixMath.h
+    hsOptionalCall.h
     hsPoint2.h
     hsPoolVector.h
     hsQuat.h
