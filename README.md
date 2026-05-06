@@ -37,6 +37,7 @@ Plasma currently requires the following third-party libraries:
 - string_theory - http://github.com/zrax/string_theory/
 - Standalone ASIO - https://think-async.com/Asio/
 - tl::expected - https://github.com/TartanLlama/expected
+- mpg123 - https://www.mpg123.de/
 
 The following libraries are optional:
 
