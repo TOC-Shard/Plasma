@@ -57,7 +57,7 @@ enum plVoiceFlags
 static_assert((plVoiceFlags::kLastVoiceFlag >> 1) <= UINT8_MAX, "plVoiceFlags overflows uint8");
 
 #define BUFFER_LEN_SECONDS      4
-#define FREQUENCY               8000
+#define FREQUENCY               16000
 #define AUDIO_FPS               50
 
 struct hsVector3;

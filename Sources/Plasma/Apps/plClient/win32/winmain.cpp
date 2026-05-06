@@ -532,7 +532,7 @@ static void AuthFailedStrings (ENetError authError,
                     *ppStr2 = "Unable to connect to GameTap, please try again in a few minutes.";
                     break;
                 case kNetErrAccountBanned:
-                    *ppStr2 = "Your account has been banned from accessing The Open Cave.  If you are unsure as to why this happened please contact customer support.";
+                    *ppStr2 = "Your account has been banned or has not yet been activated to access The Open Cave.\nIf you are unsure why this happened, please contact support.";
                     break;
                 default:
                     *ppWStr =  NetErrorToString (authError);

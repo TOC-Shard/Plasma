@@ -416,6 +416,8 @@ public:
 plOpusEncoder::plOpusEncoder()
     : fOpus(opus_encoder_create(kOpusEncoderSampleRate, 1, OPUS_APPLICATION_VOIP, nullptr))
 {
+    opus_encoder_ctl(fOpus, OPUS_SET_BITRATE(24000));
+    opus_encoder_ctl(fOpus, OPUS_SET_VBR(1));
 }
 
 plOpusEncoder::~plOpusEncoder()
