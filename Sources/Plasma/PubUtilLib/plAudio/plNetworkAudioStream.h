@@ -45,12 +45,18 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "HeadSpin.h"
 #include <string_theory/string>
 #include <atomic>
+#include <condition_variable>
+#include <mutex>
 #include <thread>
 #include <vector>
 
-// Plays a live HTTP/Icecast MP3 audio stream through OpenAL.
-// Downloads via libcurl, decodes via libmpg123, buffers PCM in a lock-free
-// ring buffer, and feeds OpenAL from the main thread via Update().
+#ifdef USE_VORBIS_STREAM
+#   include <vorbis/vorbisfile.h>
+#endif
+
+// Plays a live HTTP/Icecast audio stream (MP3 or OGG/Vorbis) through OpenAL.
+// Downloads via libcurl. MP3 decoded via libmpg123, OGG via libvorbisfile.
+// PCM is buffered in a lock-free ring buffer and fed to OpenAL from the main thread.
 class plNetworkAudioStream
 {
 public:
@@ -58,8 +64,8 @@ public:
     ~plNetworkAudioStream();
 
     // Open and start streaming from a URL (http:// or https://).
-    // positional=true forces mono decode so OpenAL can apply 3D positioning.
-    // Returns false immediately if mpg123/curl are unavailable.
+    // Format is detected from the URL extension (.ogg/.oga → Vorbis, else → MP3).
+    // positional=true forces mono so OpenAL can apply 3D positioning.
     bool Open(const ST::string& url, float volume = 1.0f, bool positional = false);
 
     // Stop playback and release all resources.
@@ -74,7 +80,6 @@ public:
 
     // Set 3D world-space position. Call after Open().
     // minDist: full-volume radius; maxDist: silence beyond this.
-    // If never called, plays as 2D (listener-relative).
     void SetPosition(float x, float y, float z, float minDist = 15.f, float maxDist = 10000.f);
 
     bool IsPlaying() const;
@@ -84,20 +89,19 @@ private:
     // Ring buffer capacity: ~4 MB — approx. 23 s of stereo 44.1 kHz 16-bit PCM.
     static constexpr size_t kRingBufSize = 4 * 1024 * 1024;
     static constexpr int    kNumALBufs   = 8;
-    static constexpr size_t kALBufBytes  = 16 * 1024; // 16 KB per OpenAL buffer
+    static constexpr size_t kALBufBytes  = 16 * 1024;
 
-    // --- download / decode thread ---
-    struct mpg123_handle_struct* fMpg123 = nullptr;
-    std::thread      fThread;
+    // --- shared state ---
+    std::thread       fThread;
     std::atomic<bool> fStopRequested{false};
     std::atomic<bool> fValid{false};
 
-    // Format discovered after first MP3 frame
+    // Format discovered after the first decoded frame
     std::atomic<bool> fFormatReady{false};
     long fSampleRate = 44100;
     int  fChannels   = 1;
 
-    // Lock-free SPSC ring buffer (one writer: download thread; one reader: main thread)
+    // Lock-free SPSC ring buffer (writer: download/decode thread; reader: main thread)
     std::vector<uint8_t> fRing;
     std::atomic<size_t>  fRingWrite{0};
     std::atomic<size_t>  fRingRead{0};
@@ -105,29 +109,57 @@ private:
     size_t IRingAvailable() const;
     size_t IRingFree()      const;
     size_t IRingWrite(const uint8_t* data, size_t len);
-    size_t IRingRead(uint8_t* out,   size_t len);
+    size_t IRingRead(uint8_t* out, size_t len);
 
     // --- OpenAL ---
-    unsigned int  fALSource = 0;
-    unsigned int  fALBufs[kNumALBufs] = {};
-    bool          fALReady  = false;
-    float         fVolume   = 1.0f;
-    int           fALFormat = 0; // AL_FORMAT_MONO16 or AL_FORMAT_STEREO16
-
-    float         fPosX = 0.f, fPosY = 0.f, fPosZ = 0.f;
-    float         fMinDist = 15.f, fMaxDist = 10000.f;
-    bool          fHasPosition = false;
-    bool          fPositional = false;
-    bool          fMuted = false;
+    unsigned int fALSource = 0;
+    unsigned int fALBufs[kNumALBufs] = {};
+    bool         fALReady  = false;
+    float        fVolume   = 1.0f;
+    int          fALFormat = 0; // AL_FORMAT_MONO16 or AL_FORMAT_STEREO16
+    float        fPosX = 0.f, fPosY = 0.f, fPosZ = 0.f;
+    float        fMinDist = 15.f, fMaxDist = 10000.f;
+    bool         fHasPosition = false;
+    bool         fPositional  = false;
+    bool         fMuted       = false;
 
     bool IInitAL();
     void IFillAndQueueALBuf(unsigned int bufId);
     void IDestroyAL();
 
-    // --- curl / mpg123 thread ---
+    // --- common download helpers ---
     void IDownloadThread(ST::string url);
+    static bool IIsOggUrl(const ST::string& url);
+
+    // --- MP3 path (libmpg123 + libcurl) ---
+#ifdef USE_MPG123
+    struct mpg123_handle_struct* fMpg123 = nullptr;
+
+    void IDownloadThreadMP3(const ST::string& url);
     bool IFeedAndDecode(const uint8_t* data, size_t size);
-    static size_t SCurlWriteCb(char* ptr, size_t size, size_t nmemb, void* userdata);
+    static size_t SCurlWriteCbMP3(char* ptr, size_t size, size_t nmemb, void* userdata);
+#endif
+
+    // --- OGG/Vorbis path (libvorbisfile + libcurl) ---
+#ifdef USE_VORBIS_STREAM
+    // Intermediate feed buffer: curl writes here, vorbisfile reads via callbacks.
+    std::vector<uint8_t>    fOggFeedBuf;
+    size_t                  fOggFeedPos  = 0;
+    std::mutex              fOggFeedMutex;
+    std::condition_variable fOggFeedCV;
+    bool                    fOggCurlDone = false;
+    std::thread             fOggDecodeThread;
+
+    void IDownloadThreadOgg(const ST::string& url);
+    void IOggDecodeThread();
+
+    static size_t SCurlWriteCbOgg(char* ptr, size_t size, size_t nmemb, void* userdata);
+
+    // ov_callbacks
+    static size_t SOggRead(void* ptr, size_t size, size_t nmemb, void* ds);
+    static int    SOggSeek(void* ds, ogg_int64_t offset, int whence);
+    static long   SOggTell(void* ds);
+#endif
 };
 
 #endif // plNetworkAudioStream_h
