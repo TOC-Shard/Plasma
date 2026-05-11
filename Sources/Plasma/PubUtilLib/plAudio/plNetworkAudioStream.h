@@ -50,6 +50,9 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include <thread>
 #include <vector>
 
+#if defined(USE_MPG123) || defined(USE_VORBIS_STREAM)
+#   include <curl/curl.h>
+#endif
 #ifdef USE_VORBIS_STREAM
 #   include <vorbis/vorbisfile.h>
 #endif
@@ -130,6 +133,8 @@ private:
     // --- common download helpers ---
     void IDownloadThread(ST::string url);
     static bool IIsOggUrl(const ST::string& url);
+    static int  SCurlProgressCb(void* userdata, curl_off_t dltotal, curl_off_t dlnow,
+                                 curl_off_t ultotal, curl_off_t ulnow);
 
     // --- MP3 path (libmpg123 + libcurl) ---
 #ifdef USE_MPG123

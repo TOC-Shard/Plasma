@@ -172,6 +172,20 @@ bool plNetworkAudioStream::IIsOggUrl(const ST::string& url)
 }
 
 // ---------------------------------------------------------------------------
+// Curl progress callback — aborts curl when stop is requested.
+// Called at least once per second by curl regardless of data flow,
+// so Close() unblocks within ~1 s even on a stalled live stream socket.
+// ---------------------------------------------------------------------------
+
+#if defined(USE_MPG123) || defined(USE_VORBIS_STREAM)
+int plNetworkAudioStream::SCurlProgressCb(void* userdata, curl_off_t, curl_off_t, curl_off_t, curl_off_t)
+{
+    auto* self = static_cast<plNetworkAudioStream*>(userdata);
+    return self->fStopRequested.load(std::memory_order_relaxed) ? 1 : 0;
+}
+#endif
+
+// ---------------------------------------------------------------------------
 // Playlist resolution (M3U / PLS → actual stream URL)  [shared by both paths]
 // ---------------------------------------------------------------------------
 
@@ -400,13 +414,16 @@ void plNetworkAudioStream::IDownloadThreadMP3(const ST::string& url)
         return;
     }
 
-    curl_easy_setopt(curl, CURLOPT_URL,            url.c_str());
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,  SCurlWriteCbMP3);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA,      this);
-    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-    curl_easy_setopt(curl, CURLOPT_USERAGENT,      "PlasmaClient/1.0");
-    curl_easy_setopt(curl, CURLOPT_HTTP_VERSION,   CURL_HTTP_VERSION_1_1);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT,        0L); // live streams run indefinitely
+    curl_easy_setopt(curl, CURLOPT_URL,              url.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,    SCurlWriteCbMP3);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA,        this);
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION,   1L);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT,        "PlasmaClient/1.0");
+    curl_easy_setopt(curl, CURLOPT_HTTP_VERSION,     CURL_HTTP_VERSION_1_1);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT,          0L);
+    curl_easy_setopt(curl, CURLOPT_NOPROGRESS,       0L);
+    curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, SCurlProgressCb);
+    curl_easy_setopt(curl, CURLOPT_XFERINFODATA,     this);
 
     plStatusLog::AddLineSF("audio.log", "plNetworkAudioStream: connecting (MP3) to {}", url);
     CURLcode res = curl_easy_perform(curl);
@@ -493,8 +510,9 @@ void plNetworkAudioStream::IOggDecodeThread()
 
     int ret = ov_open_callbacks(this, &vf, nullptr, 0, cb);
     if (ret != 0) {
-        plStatusLog::AddLineSF("audio.log",
-            "plNetworkAudioStream: ov_open_callbacks failed ({})", ret);
+        if (!fStopRequested.load(std::memory_order_relaxed))
+            plStatusLog::AddLineSF("audio.log",
+                "plNetworkAudioStream: ov_open_callbacks failed ({})", ret);
         fValid.store(false, std::memory_order_release);
         return;
     }
@@ -575,13 +593,16 @@ void plNetworkAudioStream::IDownloadThreadOgg(const ST::string& url)
         return;
     }
 
-    curl_easy_setopt(curl, CURLOPT_URL,            url.c_str());
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,  SCurlWriteCbOgg);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA,      this);
-    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-    curl_easy_setopt(curl, CURLOPT_USERAGENT,      "PlasmaClient/1.0");
-    curl_easy_setopt(curl, CURLOPT_HTTP_VERSION,   CURL_HTTP_VERSION_1_1);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT,        0L);
+    curl_easy_setopt(curl, CURLOPT_URL,              url.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,    SCurlWriteCbOgg);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA,        this);
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION,   1L);
+    curl_easy_setopt(curl, CURLOPT_USERAGENT,        "PlasmaClient/1.0");
+    curl_easy_setopt(curl, CURLOPT_HTTP_VERSION,     CURL_HTTP_VERSION_1_1);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT,          0L);
+    curl_easy_setopt(curl, CURLOPT_NOPROGRESS,       0L);
+    curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, SCurlProgressCb);
+    curl_easy_setopt(curl, CURLOPT_XFERINFODATA,     this);
 
     plStatusLog::AddLineSF("audio.log", "plNetworkAudioStream: connecting (OGG) to {}", url);
     CURLcode res = curl_easy_perform(curl);
