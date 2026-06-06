@@ -67,7 +67,8 @@ target_link_libraries(plAudio
         $<$<BOOL:${USE_OPUS}>:Opus::opus>
         $<$<BOOL:${USE_SPEEX}>:Speex::speex>
         $<$<BOOL:${USE_MPG123}>:MPG123::libmpg123>
-        $<$<BOOL:${USE_MPG123}>:CURL::libcurl>
+        $<$<BOOL:${USE_VORBIS_STREAM}>:Vorbis::vorbisfile>
+        $<$<OR:$<BOOL:${USE_MPG123}>,$<BOOL:${USE_VORBIS_STREAM}>>:CURL::libcurl>
     INTERFACE
         pnFactory
 )

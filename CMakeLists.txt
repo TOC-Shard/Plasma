@@ -148,6 +148,12 @@ if(USE_MPG123)
     add_definitions(-DUSE_MPG123)
 endif()
 
+cmake_dependent_option(USE_VORBIS_STREAM "Enable OGG/Vorbis network audio streams" ON
+    "TARGET Vorbis::vorbisfile" OFF)
+if(USE_VORBIS_STREAM)
+    add_definitions(-DUSE_VORBIS_STREAM)
+endif()
+
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL 4.0 AND CMAKE_CROSSCOMPILING)
     find_package(Python3 3.8 REQUIRED COMPONENTS Development)
 else()
