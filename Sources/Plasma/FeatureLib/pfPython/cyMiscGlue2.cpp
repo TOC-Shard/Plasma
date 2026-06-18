@@ -327,8 +327,9 @@ PYTHON_GLOBAL_METHOD_DEFINITION(PtPageInNode, args, "Params: nodeName, netForce=
     for (const auto& nodeName : nodeNames) {
         plLocation nodeLoc = plKeyFinder::Instance().FindLocation(ageName, nodeName);
         if (!nodeLoc.IsValid()) {
-            PyErr_SetString(PyExc_ValueError, ST::format("Age {} has no page named {}", ageName, nodeName).c_str());
-            PYTHON_RETURN_ERROR;
+            //PyErr_SetString(PyExc_ValueError, ST::format("Age {} has no page named {}", ageName, nodeName).c_str());
+            //PYTHON_RETURN_ERROR;
+            continue;
         }
         nodeLocs.emplace_back(nodeLoc);
     }
