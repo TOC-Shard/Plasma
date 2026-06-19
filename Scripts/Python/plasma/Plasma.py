@@ -1437,6 +1437,10 @@ class ptAudioControl:
         """Are all sounds muted? Returns 1 if true otherwise returns 0."""
         ...
 
+    def isNetStreamPlaying(self):
+        """Returns True if a network audio stream is currently playing."""
+        ...
+
     def isUsingEAXAcceleration(self):
         """Is EAX sound acceleration enabled? Returns 1 if true otherwise returns 0."""
         ...
@@ -1447,6 +1451,10 @@ class ptAudioControl:
 
     def muteAll(self):
         """Mutes all sounds."""
+        ...
+
+    def playNetStream(self, url[, volume]):
+        """Starts playing a live HTTP/MP3 audio stream. Returns True on success."""
         ...
 
     def pushToTalk(self, state):
@@ -1489,6 +1497,10 @@ class ptAudioControl:
         """
         ...
 
+    def setNetStreamVolume(self, volume):
+        """Sets the volume (0.0 to 1.0) of the network audio stream."""
+        ...
+
     def setPlaybackDevice(self, devicename, restart):
         """Sets audio system output device by name, and optionally restarts it"""
         ...
@@ -1521,6 +1533,10 @@ class ptAudioControl:
 
     def squelchLevel(self, level):
         """Sets the squelch level."""
+        ...
+
+    def stopNetStream(self):
+        """Stops the currently playing network audio stream."""
         ...
 
     def unmuteAll(self):
@@ -4380,6 +4396,10 @@ class ptSceneobject:
         """Run the attached responder to the specified state"""
         ...
 
+    def setNetStream(self, url[, volume[, minDist[, maxDist]]]):
+        """Starts a live HTTP/MP3 audio stream at this object's 3D position."""
+        ...
+
     def setSoundFilename(self, index, filename, isCompressed):
         """Sets the sound attached to this sceneobject to use the specified sound file."""
         ...
@@ -4390,6 +4410,10 @@ class ptSceneobject:
 
     def stopAnimNamed(self, animName):
         """Stop the attached named animation"""
+        ...
+
+    def stopNetStream(self):
+        """Stops the network audio stream started by setNetStream."""
         ...
 
     def up(self):
