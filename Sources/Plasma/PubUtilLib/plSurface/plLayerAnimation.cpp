@@ -678,7 +678,8 @@ uint32_t plLayerSDLAnimation::Eval(double wSecs, uint32_t frame, uint32_t ignore
         {
             if (!fVarName.empty())
             {
-                const plSDLModifier* sdlMod = plNetClientMgr::GetInstance()->GetAgeSDLModifier();
+                plNetClientMgr* mgr = plNetClientMgr::GetInstance();
+                const plSDLModifier* sdlMod = mgr ? mgr->GetAgeSDLModifier() : nullptr;
                 if (sdlMod)
                 {
                     fVar = sdlMod->GetStateCache()->FindVar(fVarName);

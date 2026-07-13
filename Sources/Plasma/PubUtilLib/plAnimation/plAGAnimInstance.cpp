@@ -263,7 +263,8 @@ void plAGAnimInstance::SearchForGlobals()
     const plAgeGlobalAnim *ageAnim = plAgeGlobalAnim::ConvertNoRef(fAnimation);
     if (ageAnim != nullptr && fSDLChannels.size() > 0)
     {
-        const plSDLModifier* sdlMod = plNetClientMgr::GetInstance()->GetAgeSDLModifier();
+        plNetClientMgr* mgr = plNetClientMgr::GetInstance();
+        const plSDLModifier* sdlMod = mgr ? mgr->GetAgeSDLModifier() : nullptr;
         if (!sdlMod)
             return;
 

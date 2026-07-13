@@ -525,7 +525,10 @@ bool plPythonSDLModifier::HasSDL(const ST::string& pythonFile)
 
 plPythonSDLModifier* plPythonSDLModifier::FindAgeSDL()
 {
-    return plPythonSDLModifier::ConvertNoRef(plNetClientMgr::GetInstance()->GetAgeSDLModifier());
+    plNetClientMgr* mgr = plNetClientMgr::GetInstance();
+    if (!mgr)
+        return nullptr;
+    return plPythonSDLModifier::ConvertNoRef(mgr->GetAgeSDLModifier());
 }
 
 /////////////////////////////////////////////
