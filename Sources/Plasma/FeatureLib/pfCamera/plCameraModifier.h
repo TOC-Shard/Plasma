@@ -105,6 +105,11 @@ public:
 
     void AddTarget(plSceneObject* so) override;
 
+    // Resolves a deferred brain target update (see fUpdateBrainTarget) without requiring
+    // this camera to be pushed active on the virtual camera stack. Safe to call every frame;
+    // it's a no-op once the target has been resolved.
+    void EnsureTargetUpdated();
+
     void    SetBrain(plCameraBrain1* brain) { fBrain = brain; }
 
     plCameraBrain1* GetBrain()      { return fBrain;}

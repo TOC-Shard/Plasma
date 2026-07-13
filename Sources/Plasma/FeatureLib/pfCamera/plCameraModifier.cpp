@@ -238,21 +238,27 @@ bool plCameraModifier1::MsgReceive(plMessage* msg)
 }
 
 
+void plCameraModifier1::EnsureTargetUpdated()
+{
+    if (fUpdateBrainTarget && fTarget && fTarget->GetCoordinateInterface()) // if we need to update the brain and the target is loaded
+    {
+        fUpdateBrainTarget = false;
+        if (GetBrain())
+            GetBrain()->AddTarget(); // update the brain's target
+    }
+}
+
 void plCameraModifier1::Update()
 {
     // update the brain
 
-    // this freeze thing is a useful debugging tool...  
+    // this freeze thing is a useful debugging tool...
     if (plVirtualCam1::Instance()->freeze)
         return;
-    
+
     if (GetBrain())
     {
-        if (fUpdateBrainTarget && fTarget->GetCoordinateInterface()) // if we need to update the brain and the target is loaded
-        {
-            fUpdateBrainTarget = false;
-            GetBrain()->AddTarget(); // update the brain's target
-        }
+        EnsureTargetUpdated();
 
         bool moveInSub = !(GetBrain()->HasFlag(plCameraBrain1::kIgnoreSubworldMovement));
 

@@ -618,6 +618,14 @@ void plDynamicCamMap::ISubmitRenderRequest(plPipeline *pipe)
 
 void plDynamicCamMap::ICheckForRefresh(double t, plPipeline *pipe)
 {
+    // An explicit capture camera may never be pushed active on the virtual camera
+    // stack (e.g. a sit-only camera that hasn't been sat in yet), in which case its
+    // brain never gets a chance to resolve a deferred target/POA update. Since we
+    // depend on its transform for our own render, nudge it along here instead of
+    // waiting for it to become the player's active camera.
+    if (fCamera)
+        fCamera->EnsureTargetUpdated();
+
     bool useRefl = (fFlags & kReflectionMask) == kReflectionMask;
     if (!fCamera)
     {
