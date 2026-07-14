@@ -108,7 +108,11 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 
 #include "MaxComponent/plAudioComponents.h"
 #include "MaxComponent/plLightMapComponent.h"
+#include "MaxComponent/plSoftVolumeComponent.h"
+#include "MaxComponent/plWebMComponent.h"
 #include "plDrawable/plGeometrySpan.h"
+#include "plIntersect/plSoftVolume.h"
+#include "plStatusLog/plStatusLog.h"
 
 #include "MaxPlasmaMtls/Materials/plClothingMtl.h"
 #include "plAvatar/plAvatarClothing.h"
@@ -1944,76 +1948,117 @@ static plAnimStealthNode* IGetEntireAnimation(plPassMtlBase* mtl)
     return nullptr;
 }
 
-static plLayerInterface* IProcessLayerMovie(plPassMtlBase* mtl, plLayerTex* layTex, plMaxNode* node, 
+static plLayerInterface* IProcessLayerMovie(plPassMtlBase* mtl, plLayerTex* layTex, plMaxNode* node,
                                          plLayerInterface* layerIFace)
 {
+    // AVI still goes through the classic "real file in the material's own Bitmap
+    // slot" detection.
+    plFileName aviFileName;
     IParamBlock2* bitmapPB = layTex->GetParamBlockByID( plLayerTex::kBlkBitmap );
-    if( !bitmapPB )
-        return layerIFace;
-    if (!bitmapPB->GetInt(kBmpUseBitmap))
-        return layerIFace;
-
-    plFileName fileName = layTex->GetBitmapFileName(); // LayerTex always pulls from kBlkBitmap
-    if (!fileName.IsValid())
-        return layerIFace;
-
-    plAnimStealthNode* stealth = IGetEntireAnimation(mtl);
-
-    ST::string ext = fileName.GetFileExt();
-    bool isAvi  = (ext.compare_i("avi") == 0);
-    bool isWebm = (ext.compare_i("webm") == 0);
-
-    if (isAvi || isWebm)
+    if (bitmapPB && bitmapPB->GetInt(kBmpUseBitmap))
     {
-        plFileName movieName = plFileName::Join("avi", fileName.GetFileName());
+        plFileName fn = layTex->GetBitmapFileName(); // LayerTex always pulls from kBlkBitmap
+        if (fn.IsValid() && fn.GetFileExt().compare_i("avi") == 0)
+            aviFileName = fn;
+    }
 
-        plLayerMovie* movieLayer = nullptr;
-        ST::string moviePostfix;
-
-        if (isAvi)
+    // WebM goes exclusively through a plWebMComponent on this node -- its own file
+    // picker/volume/falloff/autostart/loop UI, not the material's Bitmap slot (which
+    // can stay empty; it's only needed for its UV/tiling setup as a texture layer to
+    // attach onto). See plWebMComponent.cpp.
+    plWebMComponent* webmComp = nullptr;
+    for (int i = 0; i < node->NumAttachedComponents(); i++)
+    {
+        plComponentBase* comp = node->GetAttachedComponent(i);
+        if (comp && comp->ClassID() == WEBM_COMPONENT_ID)
         {
-            movieLayer = new plLayerAVI;
-            moviePostfix = ST_LITERAL("_avi");
+            webmComp = (plWebMComponent*)comp;
+            break;
         }
-        else if (isWebm)
+    }
+    plFileName webmFileName = webmComp ? webmComp->GetFileName() : plFileName();
+
+    bool isAvi  = aviFileName.IsValid();
+    bool isWebm = !isAvi && webmFileName.IsValid();
+    if (!isAvi && !isWebm)
+        return layerIFace;
+
+    plFileName fileName = isAvi ? aviFileName : webmFileName;
+    plFileName movieName = plFileName::Join("avi", fileName.GetFileName());
+
+    plLayerMovie* movieLayer = nullptr;
+    ST::string moviePostfix;
+
+    if (isAvi)
+    {
+        movieLayer = new plLayerAVI;
+        moviePostfix = ST_LITERAL("_avi");
+    }
+    else
+    {
+        movieLayer = new plLayerWebM;
+        moviePostfix = ST_LITERAL("_webm");
+    }
+
+    ST::string movieKeyName = layerIFace->GetKeyName() + moviePostfix;
+    hsgResMgr::ResMgr()->NewKey(movieKeyName, movieLayer, node->GetLocation());
+
+    plAnimTimeConvert& tc = movieLayer->GetTimeConvert();
+
+    if (isWebm)
+    {
+        plLayerWebM* webmLayer = (plLayerWebM*)movieLayer;
+
+        // A representative world position for the (3D-positioned) audio -- the
+        // node this material layer is being converted for is as good as any.
+        Point3 pos = node->GetNodeTM(TimeValue(0)).GetTrans();
+        webmLayer->SetSoundPosition(hsPoint3(pos.x, pos.y, pos.z));
+        webmLayer->SetSoundFalloff(webmComp->GetMinFalloff(), webmComp->GetMaxFalloff());
+        webmLayer->SetVolume(webmComp->GetVolume());
+
+        // Soft Region: true hard mute outside a picked region, unlike the asymptotic
+        // min/max falloff above. Same export-time pattern as
+        // plBaseSoundEmitterComponent::IGrabSoftRegion() (plAudioComponents.cpp), just
+        // targeting the webm layer's own ref (plLayerWebM::kRefSoftRegion) instead of
+        // a plSound.
+        if (webmComp->GetSoftRegionEnable())
         {
-            movieLayer = new plLayerWebM;
-            moviePostfix = ST_LITERAL("_webm");
-        }
-
-        ST::string movieKeyName = layerIFace->GetKeyName() + moviePostfix;
-        hsgResMgr::ResMgr()->NewKey(movieKeyName, movieLayer, node->GetLocation());
-
-        if (isWebm)
-        {
-            plLayerWebM* webmLayer = (plLayerWebM*)movieLayer;
-
-            // A representative world position for the (3D-positioned) audio -- the
-            // node this material layer is being converted for is as good as any.
-            Point3 pos = node->GetNodeTM(TimeValue(0)).GetTrans();
-            webmLayer->SetSoundPosition(hsPoint3(pos.x, pos.y, pos.z));
-
-            // If there's a "Sound 3D" component on the same node, reuse just its
-            // Min/Max Falloff Distance settings for the movie's audio (its own sound
-            // file, if any, is not used). Otherwise plLayerWebM's own defaults apply;
-            // either way this can still be changed later at runtime via ptLayerMovie.
-            for (int i = 0; i < node->NumAttachedComponents(); i++)
+            INode* softNode = webmComp->GetSoftRegionNode();
+            plSoftVolBaseComponent* softComp = plSoftVolBaseComponent::GetSoftComponent(softNode);
+            if (softComp != nullptr)
             {
-                plComponentBase* comp = node->GetAttachedComponent(i);
-                int minDist, maxDist;
-                if (comp && plAudioComp::GetSound3DFalloffDistances(comp, minDist, maxDist))
+                plKey softKey = softComp->GetSoftVolume();
+                if (softKey != nullptr)
                 {
-                    webmLayer->SetSoundFalloff(minDist, maxDist);
-                    break;
+                    plSoftVolume* vol = plSoftVolume::ConvertNoRef(softKey->GetObjectPtr());
+                    if (vol != nullptr)
+                    {
+                        vol->SetCheckListener();
+                        hsgResMgr::ResMgr()->AddViaNotify(softKey,
+                            new plGenRefMsg(movieLayer->GetKey(), plRefMsg::kOnCreate, 0, plLayerWebM::kRefSoftRegion),
+                            plRefFlags::kActiveRef);
+                        plStatusLog::AddLineSF("movie.log", "{}: soft region '{}' wired up ok", fileName, softKey->GetName());
+                    }
+                    else
+                        plStatusLog::AddLineSF("movie.log", "{}: soft region enabled, but the picked node's object isn't a plSoftVolume", fileName);
                 }
+                else
+                    plStatusLog::AddLineSF("movie.log", "{}: soft region enabled, but GetSoftVolume() returned no key", fileName);
             }
+            else
+                plStatusLog::AddLineSF("movie.log", "{}: soft region enabled, but no valid soft-volume component is picked (node={})",
+                                        fileName, softNode ? softNode->GetName() : _T("<none>"));
         }
 
-        movieLayer->SetMovieName(movieName);
-        movieLayer->Eval(0,0,0);
-
-        plAnimTimeConvert& tc = movieLayer->GetTimeConvert();
-
+        if (webmComp->GetAutoStart())
+            tc.Start(0);
+        else
+            tc.Stop(true);
+        tc.Loop(webmComp->GetLoop());
+    }
+    else
+    {
+        plAnimStealthNode* stealth = IGetEntireAnimation(mtl);
         if (stealth)
         {
             if (stealth->GetAutoStart())
@@ -2023,13 +2068,17 @@ static plLayerInterface* IProcessLayerMovie(plPassMtlBase* mtl, plLayerTex* layT
 
             tc.Loop(stealth->GetLoop());
         }
-        tc.SetLoopPoints(0, movieLayer->GetLength());
-        tc.SetBegin(0);
-        tc.SetEnd(movieLayer->GetLength());
-
-        movieLayer->AttachViaNotify(layerIFace);
-        layerIFace = movieLayer;
     }
+
+    movieLayer->SetMovieName(movieName);
+    movieLayer->Eval(0,0,0);
+
+    tc.SetLoopPoints(0, movieLayer->GetLength());
+    tc.SetBegin(0);
+    tc.SetEnd(movieLayer->GetLength());
+
+    movieLayer->AttachViaNotify(layerIFace);
+    layerIFace = movieLayer;
 
     return layerIFace;
 }

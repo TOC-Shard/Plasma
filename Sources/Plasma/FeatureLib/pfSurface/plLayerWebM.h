@@ -48,6 +48,8 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "plLayerMovie.h"
 
 struct plWebMMovieInfo;
+class plSoftVolume;
+class plMessage;
 
 // Plays a WebM (VP9 video + Opus audio) file as a material layer's texture on a
 // 3D object, instead of full-screen (see pfMoviePlayer/plMoviePlayer for that).
@@ -66,6 +68,12 @@ protected:
     bool                fHasSoundPos;
     int                 fFalloffMin;
     int                 fFalloffMax;
+    float               fVolume;
+    plSoftVolume*       fSoftRegion; // non-owning; ref tracked via the resmgr like plSound::fSoftRegion
+    float               fLastLoggedStrength; // debug only, not serialized -- see IApplyAudioSettings()
+    bool                fRegisteredForTime; // see IInit()/ICloseMovie() -- keeps gain (mute/volume/soft region)
+                                             // updating every frame regardless of whether this layer's material
+                                             // is actually being Eval()'d (i.e. even while the object is offscreen)
 
     bool                ICloseMovie();
 
@@ -78,6 +86,11 @@ protected:
     void                IApplyAudioSettings(); // pushes fSoundPos/fFalloffMin/fFalloffMax onto a live sound, if any
 
 public:
+    // Matches plSound::Refs' kRefSoftVolume/kSoftRegion (same numeric value, 0) --
+    // kept as its own constant since plLayerWebM isn't a plSound and has no
+    // dependency on that class' Refs enum.
+    enum { kRefSoftRegion = 0 };
+
     plLayerWebM();
     virtual ~plLayerWebM();
 
@@ -86,12 +99,14 @@ public:
 
     void Read(hsStream* s, hsResMgr* mgr) override;
     void Write(hsStream* s, hsResMgr* mgr) override;
+    bool MsgReceive(plMessage* msg) override;
 
     // Called at export time (see hsMaterialConverter::IProcessLayerMovie) so the
     // audio -- created lazily inside IInit() once playback actually starts -- comes
     // up already positioned/attenuated correctly.
     void SetSoundPosition(const hsPoint3& pos) { fSoundPos = pos; fHasSoundPos = true; }
     void SetSoundFalloff(int minDist, int maxDist) { fFalloffMin = minDist; fFalloffMax = maxDist; }
+    void SetVolume(float volume) { fVolume = volume; }
 };
 
 #endif // plLayerWebM_inc

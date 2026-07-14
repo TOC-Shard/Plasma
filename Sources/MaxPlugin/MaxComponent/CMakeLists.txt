@@ -75,6 +75,7 @@ set(MaxComponent_HEADERS
     plSoftVolumeComponent.h
     plVolumeGadgetComponent.h
     plWaterComponent.h
+    plWebMComponent.h
     plXImposter.h
 )
 
@@ -162,6 +163,7 @@ set(MaxComponent_SOURCES
     plTypesComponents.cpp
     plVolumeGadgetComponent.cpp
     plWaterComponent.cpp
+    plWebMComponent.cpp
     plXImposter.cpp
 )
 

@@ -74,7 +74,6 @@ set(MaxPlasmaMtls_SOURCES
     plBMSampler.cpp
     plDetailCurveCtrl.cpp
     plMtlImport.cpp
-    plWebMBitmap.cpp
     Shaders.cpp
 )
 

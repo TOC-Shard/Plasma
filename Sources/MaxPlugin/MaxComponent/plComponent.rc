@@ -6037,6 +6037,39 @@ BEGIN
                     14,51,39,8
 END
 
+IDD_COMP_WEBM DIALOG  0, 0, 108, 128
+STYLE DS_SETFONT | WS_CHILD
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "Video File:",IDC_STATIC,7,5,44,8
+    CONTROL         "",IDC_COMP_WEBM_FILENAME_BTN,"CustButton",WS_TABSTOP,
+                    7,14,93,13
+    LTEXT           "Volume:",IDC_STATIC,9,32,26,8
+    CONTROL         "Custom1",IDC_COMP_WEBM_VOLUME_EDIT,"CustEdit",
+                    WS_TABSTOP,43,31,40,10
+    CONTROL         "Custom2",IDC_COMP_WEBM_VOLUME_SPIN,"SpinnerControl",
+                    WS_TABSTOP,85,31,7,10
+    GROUPBOX        "Sound Falloff Distance",IDC_STATIC,3,44,100,38
+    LTEXT           "Begin:",IDC_STATIC,10,56,21,8
+    CONTROL         "Custom1",IDC_COMP_WEBM_MINFALLOFF_EDIT,"CustEdit",
+                    WS_TABSTOP,43,55,40,10
+    CONTROL         "Custom2",IDC_COMP_WEBM_MINFALLOFF_SPIN,"SpinnerControl",
+                    WS_TABSTOP,85,55,7,10
+    LTEXT           "Inaudible:",IDC_STATIC,7,68,32,8
+    CONTROL         "Custom1",IDC_COMP_WEBM_MAXFALLOFF_EDIT,"CustEdit",
+                    WS_TABSTOP,43,67,40,10
+    CONTROL         "Custom2",IDC_COMP_WEBM_MAXFALLOFF_SPIN,"SpinnerControl",
+                    WS_TABSTOP,85,67,7,10
+    CONTROL         "Auto Start",IDC_COMP_WEBM_AUTOSTART_CKBX,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,7,85,47,10
+    CONTROL         "Loop",IDC_COMP_WEBM_LOOP_CKBX,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,60,85,40,10
+    CONTROL         "Enable Soft Region",IDC_COMP_WEBM_SOFTENABLE_CKBX,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,7,99,80,10
+    CONTROL         "",IDC_COMP_WEBM_SOFTREGION_BTN,"CustButton",WS_TABSTOP,
+                    7,111,93,13
+END
+
 
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
@@ -7313,10 +7346,12 @@ BEGIN
     IDS_COMP_GRASS_ROLL     "Grass"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     IDS_COMP_ANIM_COMPRESS_ROLL "Anim Compression"
     IDS_COMP_RIDE_ANIMATED_PHYS "Ride Animated Physical Region"
+    IDS_COMP_WEBM           "WebM Video"
+    IDS_COMP_WEBM_SOFTSELECT "Pick a soft region for the WebM video's audio"
 END
 
 #endif    // English (U.S.) resources

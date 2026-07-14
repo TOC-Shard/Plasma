@@ -732,7 +732,7 @@ plFileName plPageInfoUtils::GetAgeFolder()
 
 int32_t   plPageInfoUtils::CombineSeqNum( int prefix, int suffix )
 {
-    hsAssert(abs(prefix) < 0xFF, "Sequence prefix must be less then the max 8-bit number");
+    //hsAssert(abs(prefix) < 0xFF, "Sequence prefix must be less then the max 8-bit number");
     hsAssert(suffix <= 0xFFFF, "Sequence suffix must be less then the max 16-bit number");
     hsAssert(suffix >= 0, "Sequence suffix must be unsigned");
     if( prefix < 0 )

@@ -43,6 +43,8 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "plLayerWebM.h"
 
 #include <cstring>
+#include <deque>
+#include <iterator>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -69,7 +71,12 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 
 #include "plAudio/plAudioSystem.h"
 #include "plGImage/plMipmap.h"
+#include "plgDispatch.h"
+#include "plIntersect/plSoftVolume.h"
 #include "plStatusLog/plStatusLog.h"
+
+#include "pnMessage/plRefMsg.h"
+#include "pnMessage/plTimeMsg.h"
 
 #define SAFE_OP(x, err) \
 { \
@@ -194,6 +201,24 @@ public:
     }
 };
 
+// Caps how many frames IGetCurrentFrame() will actually push through the VP9
+// decoder in a single tick while catching up after an absence -- spreads the
+// cost over several ticks instead of stalling once. See IGetCurrentFrame().
+constexpr int32_t kMaxDecodePerTick = 8;
+
+// A raw, not-yet-decoded frame read out of a block, plus the metadata needed
+// to catch up efficiently after a long absence (see IGetCurrentFrame()):
+// isKey lets us skip decoding anything before the newest keyframe in a
+// backlog (VP9 keyframes don't need prior reference frames), and timeNs lets
+// us record exactly how far a partial, rate-limited catch-up actually got.
+struct WebMFrameData
+{
+    std::unique_ptr<uint8_t[]> data;
+    int32_t size;
+    bool isKey;
+    int64_t timeNs;
+};
+
 class TrackMgr
 {
 protected:
@@ -208,7 +233,7 @@ public:
 
     // Collects raw frame buffers for every block up to movieTimeNs, advancing our
     // position forward -- this can never rewind (see the class comment in plLayerWebM.h).
-    bool GetFrames(mkvparser::MkvReader* reader, int64_t movieTimeNs, std::vector<std::pair<std::unique_ptr<uint8_t[]>, int32_t>>& frames)
+    bool GetFrames(mkvparser::MkvReader* reader, int64_t movieTimeNs, std::vector<WebMFrameData>& frames)
     {
         if (!fCurrentBlock)
             fStatus = int32_t(fTrack->GetFirst(fCurrentBlock));
@@ -217,11 +242,12 @@ public:
             const mkvparser::Block* block = fCurrentBlock->GetBlock();
             int64_t time = block->GetTime(fCurrentBlock->GetCluster()) - fTrack->GetCodecDelay();
             if (time <= movieTimeNs) {
+                bool isKey = block->IsKey();
                 for (int32_t i = 0; i < block->GetFrameCount(); i++) {
                     const mkvparser::Block::Frame data = block->GetFrame(i);
                     auto buf = std::make_unique<uint8_t[]>(data.len);
                     data.Read(reader, buf.get());
-                    frames.emplace_back(std::move(buf), static_cast<int32_t>(data.len));
+                    frames.push_back({std::move(buf), static_cast<int32_t>(data.len), isKey, time});
                 }
                 fStatus = int32_t(fTrack->GetNext(fCurrentBlock, fCurrentBlock));
             } else {
@@ -253,13 +279,15 @@ struct plWebMMovieInfo
     unsigned int                        fALBuffer = 0;
     bool                                fALReady = false;
     int64_t                             fMovieTimeNs = 0;
+    // Frames read but not yet decoded -- see IGetCurrentFrame()'s catch-up logic.
+    std::deque<WebMFrameData>           fPendingVideoFrames;
 #endif
 };
 
 // =====================================================
 
 plLayerWebM::plLayerWebM()
-    : fWebMInfo(new plWebMMovieInfo), fHasSoundPos(), fFalloffMin(1), fFalloffMax(1000000000)
+    : fWebMInfo(new plWebMMovieInfo), fHasSoundPos(), fFalloffMin(1), fFalloffMax(1000000000), fVolume(1.f), fSoftRegion(), fLastLoggedStrength(-1.f), fRegisteredForTime()
 { }
 
 plLayerWebM::~plLayerWebM()
@@ -340,7 +368,7 @@ bool plLayerWebM::IInit()
             if (error != OPUS_OK) {
                 hsAssert(false, "Error occurred initializing opus");
             } else {
-                std::vector<std::pair<std::unique_ptr<uint8_t[]>, int32_t>> frames;
+                std::vector<WebMFrameData> frames;
                 fWebMInfo->fAudioTrack->GetFrames(fWebMInfo->fReader, fWebMInfo->fSegment->GetDuration(), frames);
 
                 constexpr int kMaxFrameSize = 5760; // max packet duration at 48kHz
@@ -349,7 +377,7 @@ bool plLayerWebM::IInit()
                 auto frameData = std::make_unique<int16_t[]>((size_t)kMaxFrameSize * numChannels);
 
                 for (const auto& frame : frames) {
-                    int samples = opus_decode(opus, frame.first.get(), frame.second, frameData.get(), kMaxFrameSize, 0);
+                    int samples = opus_decode(opus, frame.data.get(), frame.size, frameData.get(), kMaxFrameSize, 0);
                     if (samples < 0) {
                         hsAssert(false, "opus error");
                         continue;
@@ -381,6 +409,18 @@ bool plLayerWebM::IInit()
                 fWebMInfo->fALReady = true;
                 IApplyAudioSettings();
                 alSourcePlay(fWebMInfo->fALSource);
+
+                // Eval() (and thus IGetCurrentFrame(), which is what normally calls
+                // IApplyAudioSettings()) only runs while this layer's material is
+                // actually being drawn -- i.e. never while the object is offscreen.
+                // Audio (mute/volume/soft region) needs to keep reacting regardless
+                // of visibility, so register for the engine's global per-frame
+                // plTimeMsg (same mechanism plSound uses for fades) as a second,
+                // visibility-independent tick.
+                if (!fRegisteredForTime) {
+                    plgDispatch::Dispatch()->RegisterForExactType(plTimeMsg::Index(), GetKey());
+                    fRegisteredForTime = true;
+                }
             }
         } else {
             plStatusLog::AddLineSF("movie.log", "{}: Audio track is not Opus, skipping audio", fMovieName);
@@ -428,19 +468,54 @@ bool plLayerWebM::IGetCurrentFrame()
             return true;
         }
     }
-    fWebMInfo->fMovieTimeNs = targetNs;
 
-    std::vector<std::pair<std::unique_ptr<uint8_t[]>, int32_t>> frames;
-    fWebMInfo->fVideoTrack->GetFrames(fWebMInfo->fReader, targetNs, frames);
+    IApplyAudioSettings(); // picks up SFX volume/mute changes every tick, see its comment
 
-    std::unique_ptr<VpxFrame> lastFrame;
-    for (const auto& frame : frames)
+    // Pull in whatever's newly available up to targetNs and queue it -- this can be
+    // a lot of frames at once if we haven't been Eval()'d (i.e. onscreen) in a while.
+    std::vector<WebMFrameData> newFrames;
+    fWebMInfo->fVideoTrack->GetFrames(fWebMInfo->fReader, targetNs, newFrames);
+    for (auto& f : newFrames)
+        fWebMInfo->fPendingVideoFrames.push_back(std::move(f));
+
+    // Long-absence optimization: if there's a large backlog, jump straight to the
+    // newest keyframe in it and drop everything before -- a VP9 keyframe doesn't
+    // need any prior reference frames, so decoding from there gives the exact same
+    // final image as decoding the whole backlog, just far cheaper. Without this, 5
+    // minutes offscreen at 30fps would mean ~9000 frames to decode in one go.
+    if (fWebMInfo->fPendingVideoFrames.size() > (size_t)kMaxDecodePerTick)
     {
-        // Keep only the most recent decoded frame -- matches plMoviePlayer::IProcessVideoFrame,
-        // which only cares about displaying the latest image, not every intermediate one.
-        if (auto decoded = fWebMInfo->fVpx->Decode(frame.first.get(), (uint32_t)frame.second))
-            lastFrame = std::move(decoded);
+        auto lastKey = fWebMInfo->fPendingVideoFrames.end();
+        for (auto it = fWebMInfo->fPendingVideoFrames.begin(); it != fWebMInfo->fPendingVideoFrames.end(); ++it)
+        {
+            if (it->isKey)
+                lastKey = it;
+        }
+        if (lastKey != fWebMInfo->fPendingVideoFrames.end() && lastKey != fWebMInfo->fPendingVideoFrames.begin())
+        {
+            size_t dropped = std::distance(fWebMInfo->fPendingVideoFrames.begin(), lastKey);
+            fWebMInfo->fPendingVideoFrames.erase(fWebMInfo->fPendingVideoFrames.begin(), lastKey);
+            plStatusLog::AddLineSF("movie.log", "{}: catch-up skipped {} frame(s) by jumping to newest keyframe",
+                                    fMovieName, dropped);
+        }
     }
+
+    // Cap actual decode work this tick -- if there's still a backlog after this,
+    // fMovieTimeNs only advances as far as we actually got, so the remainder
+    // continues to be worked off on the next tick(s) instead of stalling once.
+    std::unique_ptr<VpxFrame> lastFrame;
+    int32_t decodedCount = 0;
+    while (!fWebMInfo->fPendingVideoFrames.empty() && decodedCount < kMaxDecodePerTick)
+    {
+        WebMFrameData& frame = fWebMInfo->fPendingVideoFrames.front();
+        if (auto decoded = fWebMInfo->fVpx->Decode(frame.data.get(), (uint32_t)frame.size))
+            lastFrame = std::move(decoded);
+        fWebMInfo->fMovieTimeNs = frame.timeNs;
+        fWebMInfo->fPendingVideoFrames.pop_front();
+        decodedCount++;
+    }
+    if (fWebMInfo->fPendingVideoFrames.empty())
+        fWebMInfo->fMovieTimeNs = targetNs; // fully caught up
 
     if (lastFrame)
     {
@@ -470,6 +545,10 @@ bool plLayerWebM::ICloseMovie()
         fWebMInfo->fALBuffer = 0;
         fWebMInfo->fALReady = false;
     }
+    if (fRegisteredForTime) {
+        plgDispatch::Dispatch()->UnRegisterForExactType(plTimeMsg::Index(), GetKey());
+        fRegisteredForTime = false;
+    }
     fWebMInfo->fVpx.reset();
     fWebMInfo->fVideoTrack.reset();
     fWebMInfo->fAudioTrack.reset();
@@ -481,6 +560,7 @@ bool plLayerWebM::ICloseMovie()
         fWebMInfo->fReader = nullptr;
     }
     fWebMInfo->fMovieTimeNs = 0;
+    fWebMInfo->fPendingVideoFrames.clear();
 #endif
     return false;
 }
@@ -506,6 +586,28 @@ void plLayerWebM::IApplyAudioSettings()
     }
     alSourcef(fWebMInfo->fALSource, AL_REFERENCE_DISTANCE, (float)fFalloffMin);
     alSourcef(fWebMInfo->fALSource, AL_MAX_DISTANCE, (float)fFalloffMax);
+
+    // Bypassing plSound/plWin32Sound entirely (see the fALSource/fALBuffer comment
+    // above) means we never automatically pick up the SFX channel slider or the
+    // master mute toggle the way a normal plSound does via IGetChannelVolume() --
+    // without this, the source just sits at OpenAL's default AL_GAIN of 1.0 forever,
+    // deaf to every audio option in the game. Called every tick from
+    // IGetCurrentFrame() so slider/mute changes take effect immediately, not just
+    // once at Init() time. fVolume is the per-instance multiplier set on the
+    // plWebMComponent in Max (see hsMaterialConverter::IProcessLayerMovie); OpenAL
+    // allows gain > 1.0 (it's a linear multiplier, not clamped), so a builder can
+    // push a quiet source louder if they need to.
+    // fSoftRegion (optional, also set on the component) gives a true hard mute
+    // outside a picked Soft Region, unlike the asymptotic min/max falloff, which
+    // never quite reaches zero -- see plSoftVolume::GetStrength().
+    float regionStrength = fSoftRegion ? fSoftRegion->GetStrength(plgAudioSys::GetCurrListenerPos()) : 1.f;
+    if (regionStrength != fLastLoggedStrength) {
+        plStatusLog::AddLineSF("movie.log", "{}: soft region strength = {} (region {})",
+                                fMovieName, regionStrength, fSoftRegion ? "present" : "not set");
+        fLastLoggedStrength = regionStrength;
+    }
+    float gain = plgAudioSys::IsMuted() ? 0.f : plgAudioSys::GetChannelVolume(plgAudioSys::kSoundFX) * fVolume * regionStrength;
+    alSourcef(fWebMInfo->fALSource, AL_GAIN, gain);
 #endif
 }
 
@@ -514,6 +616,33 @@ void plLayerWebM::ISetAudioFalloff(int minDist, int maxDist)
     fFalloffMin = minDist;
     fFalloffMax = maxDist;
     IApplyAudioSettings(); // no-op if the sound hasn't been created yet; picked up by IInit() later either way
+}
+
+bool plLayerWebM::MsgReceive(plMessage* msg)
+{
+    if (plTimeMsg::ConvertNoRef(msg))
+    {
+        // Global per-frame tick, independent of whether this layer is currently
+        // being Eval()'d -- see the registration comment in IInit().
+        IApplyAudioSettings();
+        return true;
+    }
+
+    if (plGenRefMsg* refMsg = plGenRefMsg::ConvertNoRef(msg))
+    {
+        if (refMsg->fType == kRefSoftRegion)
+        {
+            if (refMsg->GetContext() & (plRefMsg::kOnCreate | plRefMsg::kOnRequest | plRefMsg::kOnReplace))
+                fSoftRegion = plSoftVolume::ConvertNoRef(refMsg->GetRef());
+            else if (refMsg->GetContext() & (plRefMsg::kOnRemove | plRefMsg::kOnDestroy))
+                fSoftRegion = nullptr;
+            plStatusLog::AddLineSF("movie.log", "{}: MsgReceive got soft region ref, fSoftRegion={}",
+                                    fMovieName, fSoftRegion ? "set" : "null");
+            return true;
+        }
+    }
+
+    return plLayerMovie::MsgReceive(msg);
 }
 
 void plLayerWebM::Read(hsStream* s, hsResMgr* mgr)
@@ -525,6 +654,9 @@ void plLayerWebM::Read(hsStream* s, hsResMgr* mgr)
         fSoundPos.Read(s);
     fFalloffMin = s->ReadLE32();
     fFalloffMax = s->ReadLE32();
+    fVolume = s->ReadLEFloat();
+
+    mgr->ReadKeyNotifyMe(s, new plGenRefMsg(GetKey(), plRefMsg::kOnCreate, 0, kRefSoftRegion), plRefFlags::kActiveRef);
 }
 
 void plLayerWebM::Write(hsStream* s, hsResMgr* mgr)
@@ -536,4 +668,7 @@ void plLayerWebM::Write(hsStream* s, hsResMgr* mgr)
         fSoundPos.Write(s);
     s->WriteLE32((uint32_t)fFalloffMin);
     s->WriteLE32((uint32_t)fFalloffMax);
+    s->WriteLEFloat(fVolume);
+
+    mgr->WriteKey(s, fSoftRegion);
 }
