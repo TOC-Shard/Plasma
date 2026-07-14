@@ -159,6 +159,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "pyStream.h"
 
 #include "pyMoviePlayer.h"
+#include "pyLayerMovie.h"
 #include "pyDrawControl.h"
 
 #include "pyWaveSet.h"
@@ -1093,6 +1094,7 @@ void PythonInterface::AddPlasmaClasses(PyObject* plasmaMod)
     pyJournalBook::AddPlasmaClasses(plasmaMod);
     pyKeyMap::AddPlasmaClasses(plasmaMod);
     pyLayer::AddPlasmaClasses(plasmaMod);
+    pyLayerMovie::AddPlasmaClasses(plasmaMod);
     pyMarkerMgr::AddPlasmaClasses(plasmaMod);
     pyMoviePlayer::AddPlasmaClasses(plasmaMod);
     pyNetLinkingMgr::AddPlasmaClasses(plasmaMod);

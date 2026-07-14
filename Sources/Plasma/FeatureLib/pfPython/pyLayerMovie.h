@@ -39,50 +39,59 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
       Mead, WA   99021
 
 *==LICENSE==*/
-#include "plMtlImport.h"
+#ifndef _pyLayerMovie_h_
+#define _pyLayerMovie_h_
 
-extern ClassDesc2* GetPassMtlDesc();
-extern ClassDesc2* GetLayerTexDesc();
-extern ClassDesc2* GetStaticEnvLayerDesc();
-extern ClassDesc2* GetMultiMtlDesc();
-extern ClassDesc2* GetDecalMtlDesc();
-extern ClassDesc2* GetCompMtlDesc();
-extern ClassDesc2* GetParticleMtlDesc();
-extern ClassDesc2* GetDynamicEnvLayerDesc();
-extern ClassDesc2* GetBumpMtlDesc();
-extern ClassDesc2* GetDynamicTextLayerDesc();
-extern ClassDesc2* GetClothingMtlDesc();
-extern ClassDesc2* GetAngleAttenLayerDesc();
-extern ClassDesc2* GetStealthClassDesc();
-extern ClassDesc2* GetBinkClassDesc();
-extern ClassDesc2* GetMAXCameraLayerDesc();
-extern ClassDesc2* GetWebMClassDesc();
+//////////////////////////////////////////////////////////////////////
+//
+// pyLayerMovie - controls a plLayerMovie/plLayerWebM already living on a
+//                3D object's material (as opposed to pyMoviePlayer, which
+//                is for the full-screen movie overlay).
+//
+//////////////////////////////////////////////////////////////////////
 
-int         plPlasmaMtlImport::GetNumMtlDescs()
+#include <string_theory/string>
+
+#include "pnKeyedObject/plKey.h"
+
+#include "pyGlueDefinitions.h"
+
+class pyKey;
+
+class pyLayerMovie
 {
-    return 16;
-}
+protected:
+    plKey fLayerKey;
 
-ClassDesc2  *plPlasmaMtlImport::GetMtlDesc( int i )
-{
-    switch (i)
-    {
-        case 0: return GetPassMtlDesc();
-        case 1: return GetLayerTexDesc();
-        case 2: return GetMultiMtlDesc();
-        case 3: return GetDecalMtlDesc();
-        case 4: return GetCompMtlDesc();
-        case 5: return GetStaticEnvLayerDesc();
-        case 6: return GetParticleMtlDesc();
-        case 7: return GetDynamicEnvLayerDesc();
-        case 8: return GetBumpMtlDesc();
-        case 9: return GetDynamicTextLayerDesc();
-        case 10: return GetClothingMtlDesc();
-        case 11: return GetAngleAttenLayerDesc();
-        case 12: return GetStealthClassDesc();
-        case 13: return GetBinkClassDesc();
-        case 14: return GetMAXCameraLayerDesc();
-        case 15: return GetWebMClassDesc();
-        default: return nullptr;
-    }
-}
+    pyLayerMovie() = default; // only used by python glue, do NOT call
+    pyLayerMovie(pyKey& layerKey);
+
+public:
+    // required functions for PyObject interoperability
+    PYTHON_CLASS_NEW_FRIEND(ptLayerMovie);
+    static PyObject* New(pyKey& layerKey);
+    PYTHON_CLASS_CHECK_DEFINITION; // returns true if the PyObject is a pyLayerMovie object
+    PYTHON_CLASS_CONVERT_FROM_DEFINITION(pyLayerMovie); // converts a PyObject to a pyLayerMovie (throws error if not correct type)
+
+    static void AddPlasmaClasses(PyObject* m);
+
+    void SetLayerKey(pyKey& layerKey); // only used by python glue, do NOT call
+
+    // Switches the layer to a different movie file at runtime.
+    void SetFilename(const ST::string& filename);
+
+    // Distances at which the movie's (3D-positioned) audio starts/finishes
+    // attenuating -- see plSound::SetMin()/SetMax().
+    void SetFalloff(int minDist, int maxDist);
+
+    // Notified (via plEventCallbackMsg, sent to selfKey) once when the movie
+    // reaches the end of its playback.
+    void AddCallback(pyKey& selfKey);
+
+    void Play();
+    void Pause();
+    void Resume();
+    void Stop();
+};
+
+#endif // _pyLayerMovie_h_

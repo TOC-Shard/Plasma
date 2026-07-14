@@ -364,6 +364,10 @@ plATCState *plAnimTimeConvert::IGetState(double wSecs) const
 
 plATCState *plAnimTimeConvert::IGetLatestState() const
 {
+    // Nothing has ever called IProcessStateChange() yet (e.g. Start()/Stop() were
+    // never called) -- there's no state to report. Every caller must handle this.
+    if (fStates.empty())
+        return nullptr;
     return fStates.front();
 }
 
@@ -408,7 +412,10 @@ float plAnimTimeConvert::WorldToAnimTime(double wSecs)
     if (fLastEvalWorldTime <= fLastStateChange) // Crossing into the latest state
     {
         fLastEvalWorldTime = fLastStateChange;
-        fCurrentAnimTime = IGetLatestState()->fStartAnimTime;
+        // No state has ever been recorded yet (Start()/Stop() never called) -- keep
+        // whatever fCurrentAnimTime already defaults to instead of crashing.
+        if (plATCState* state = IGetLatestState())
+            fCurrentAnimTime = state->fStartAnimTime;
     }
 
     if( (fFlags & kStopped) || (wSecs == fLastEvalWorldTime) )
@@ -466,7 +473,8 @@ float plAnimTimeConvert::WorldToAnimTime(double wSecs)
 
         if (forewards)
         {
-            if (IGetLatestState()->fStartAnimTime > fLoopEnd)
+            plATCState* latest = IGetLatestState();
+            if (latest && latest->fStartAnimTime > fLoopEnd)
             {
                 // Our animation started past the loop. Play to the end.
                 if (secs > fEnd)
@@ -491,7 +499,8 @@ float plAnimTimeConvert::WorldToAnimTime(double wSecs)
         }
         else
         {
-            if (IGetLatestState()->fStartAnimTime < fLoopBegin)
+            plATCState* latest = IGetLatestState();
+            if (latest && latest->fStartAnimTime < fLoopBegin)
             {
                 if (secs < fBegin)
                 {

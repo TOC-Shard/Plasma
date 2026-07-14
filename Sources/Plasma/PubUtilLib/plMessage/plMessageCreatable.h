@@ -207,6 +207,9 @@ REGISTER_CREATABLE(plMemberUpdateMsg);
 #include "plMeshRefMsg.h"
 REGISTER_CREATABLE(plMeshRefMsg);
 
+#include "plLayerMovieMsg.h"
+REGISTER_CREATABLE(plLayerMovieMsg);
+
 #include "plMovieMsg.h"
 REGISTER_CREATABLE(plMovieMsg);
 

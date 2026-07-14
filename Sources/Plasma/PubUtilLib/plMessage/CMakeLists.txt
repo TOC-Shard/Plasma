@@ -92,6 +92,7 @@ set(plMessage_HEADERS
     plLoadClothingMsg.h
     plLOSHitMsg.h
     plLOSRequestMsg.h
+    plLayerMovieMsg.h
     plMatRefMsg.h
     plMatrixUpdateMsg.h
     plMemberUpdateMsg.h

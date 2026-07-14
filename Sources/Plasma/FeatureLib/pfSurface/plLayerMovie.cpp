@@ -50,7 +50,10 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include <string_theory/format>
 
 #include "plMessage/plAnimCmdMsg.h"
+#include "plMessage/plLayerMovieMsg.h"
+#include "pnMessage/plEventCallbackMsg.h"
 #include "plGImage/plMipmap.h"
+#include "plStatusLog/plStatusLog.h"
 
 plLayerMovie::plLayerMovie()
 :   fCurrentFrame(-1),
@@ -166,6 +169,7 @@ uint32_t plLayerMovie::Eval(double wSecs, uint32_t frame, uint32_t ignore)
         else
         if( IsStopped() )
         {
+            plStatusLog::AddLineSF("movie.log", "{}: idling (IsStopped()==true) at frame {}", fMovieName, fCurrentFrame);
             IMovieIsIdle();
         }
         
@@ -201,8 +205,65 @@ void plLayerMovie::Write(hsStream* s, hsResMgr* mgr)
     s->Write(fMovieName.GetSize(), fMovieName.AsString().c_str());
 }
 
+void plLayerMovie::SetMovieName(const plFileName& n)
+{
+    if (n == fMovieName)
+        return;
+
+    // Release whatever was previously open (no-op if nothing was ever opened) and
+    // reset our dirty-check state so the next Eval() reinitializes from the new file.
+    IRelease();
+    fMovieName = n;
+    fCurrentFrame = -1;
+    fLength = 0;
+}
+
+void plLayerMovie::ISetAudioFalloff(int minDist, int maxDist)
+{
+    // No audio in the base class (e.g. plLayerAVI). Subclasses with an audio
+    // track (plLayerWebM) override this.
+}
+
 bool plLayerMovie::MsgReceive(plMessage* msg)
-{   
+{
+    if (plLayerMovieMsg* movieMsg = plLayerMovieMsg::ConvertNoRef(msg))
+    {
+        uint16_t cmd = movieMsg->GetCmd();
+
+        if (cmd & plLayerMovieMsg::kSetMovieName)
+            SetMovieName(movieMsg->GetFileName());
+
+        if (cmd & plLayerMovieMsg::kPlay)
+        {
+            fTimeConvert.SetCurrentAnimTime(fTimeConvert.GetBegin(), true);
+            fTimeConvert.Start();
+        }
+
+        if (cmd & plLayerMovieMsg::kPause)
+            fTimeConvert.Stop(true);
+
+        if (cmd & plLayerMovieMsg::kResume)
+            fTimeConvert.Start();
+
+        if (cmd & plLayerMovieMsg::kStop)
+        {
+            fTimeConvert.Stop(true);
+            fTimeConvert.SetCurrentAnimTime(fTimeConvert.GetBegin(), true);
+        }
+
+        if (cmd & plLayerMovieMsg::kAddCallback)
+        {
+            // AddCallback() refs the message itself, so no extra ref needed here.
+            if (plEventCallbackMsg* cb = plEventCallbackMsg::ConvertNoRef(movieMsg->GetCallback()))
+                fTimeConvert.AddCallback(cb);
+        }
+
+        if (cmd & plLayerMovieMsg::kSetFalloff)
+            ISetAudioFalloff(movieMsg->GetFalloffMin(), movieMsg->GetFalloffMax());
+
+        return true;
+    }
+
     return plLayerAnimation::MsgReceive(msg);
 }
 

@@ -74,6 +74,11 @@ protected:
     virtual bool                IInit() = 0; // Load header etc, must call ISetSize(w, h), ISetLength(s)
     virtual bool                IGetCurrentFrame() = 0; // Load fCurrentFrame into bitmap
     virtual bool                IRelease() = 0; // release any system resources.
+
+    // Applies a min/max audio falloff distance (see plSound::SetMin()/SetMax()) to
+    // whatever sound this movie owns, if any. No-op by default (e.g. plLayerAVI has
+    // no audio); overridden by subclasses that do (plLayerWebM).
+    virtual void                ISetAudioFalloff(int minDist, int maxDist);
 public:
     plLayerMovie();
     virtual ~plLayerMovie();
@@ -88,7 +93,10 @@ public:
 
     bool                    IsStopped() { return fTimeConvert.IsStopped(); }
 
-    void                    SetMovieName(const plFileName& n) { fMovieName = n; }
+    // Sets the movie file and (re)starts playback from it. Safe to call after
+    // construction/export time too -- releases any currently open movie first,
+    // so IInit() runs again fresh on the next Eval().
+    virtual void            SetMovieName(const plFileName& n);
     const plFileName&       GetMovieName() const { return fMovieName; }
 
     bool                    MsgReceive(plMessage* msg) override;

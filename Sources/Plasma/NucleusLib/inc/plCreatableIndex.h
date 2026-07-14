@@ -369,6 +369,7 @@ CLASS_INDEX_LIST_START
     CLASS_INDEX(plVolumeSensorConditionalObjectNoArbitration),
     CLASS_INDEX(plPXSubWorld),
     CLASS_INDEX(pfConfirmationMgr),
+    CLASS_INDEX(plLayerWebM),
 //---------------------------------------------------------
 // Keyed objects above this line, unkeyed (such as messages) below..
 //---------------------------------------------------------
@@ -964,6 +965,7 @@ CLASS_INDEX_LIST_START
     CLASS_INDEX(plMetalPipeline),
     CLASS_INDEX(plAIBrainDestroyedMsg),
     CLASS_INDEX(plAIGoToGoalMsg),
+    CLASS_INDEX(plLayerMovieMsg),
 CLASS_INDEX_LIST_END
 
 #endif // plCreatableIndex_inc

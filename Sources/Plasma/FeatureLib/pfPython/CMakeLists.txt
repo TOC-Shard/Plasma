@@ -55,6 +55,7 @@ set(pfPython_SOURCES
     pyKey.cpp
     pyKeyMap.cpp
     pyLayer.cpp
+    pyLayerMovie.cpp
     pyMarkerMgr.cpp
     pyMatrix44.cpp
     pyMoviePlayer.cpp
@@ -148,6 +149,7 @@ set(pfPython_HEADERS
     pyKey.h
     pyKeyMap.h
     pyLayer.h
+    pyLayerMovie.h
     pyMarkerMgr.h
     pyMatrix44.h
     pyMoviePlayer.h
@@ -237,6 +239,7 @@ set(pfPython_GLUE
     pyKeyGlue.cpp
     pyKeyMapGlue.cpp
     pyLayerGlue.cpp
+    pyLayerMovieGlue.cpp
     pyMarkerMgrGlue.cpp
     pyMatrix44Glue.cpp
     pyMoviePlayerGlue.cpp

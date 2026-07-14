@@ -104,7 +104,9 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "MaxPlasmaMtls/Layers/plLayerTexBitmapPB.h"
 
 #include "pfSurface/plLayerAVI.h"
+#include "pfSurface/plLayerWebM.h"
 
+#include "MaxComponent/plAudioComponents.h"
 #include "MaxComponent/plLightMapComponent.h"
 #include "plDrawable/plGeometrySpan.h"
 
@@ -1959,8 +1961,9 @@ static plLayerInterface* IProcessLayerMovie(plPassMtlBase* mtl, plLayerTex* layT
 
     ST::string ext = fileName.GetFileExt();
     bool isAvi  = (ext.compare_i("avi") == 0);
+    bool isWebm = (ext.compare_i("webm") == 0);
 
-    if (isAvi)
+    if (isAvi || isWebm)
     {
         plFileName movieName = plFileName::Join("avi", fileName.GetFileName());
 
@@ -1972,9 +1975,39 @@ static plLayerInterface* IProcessLayerMovie(plPassMtlBase* mtl, plLayerTex* layT
             movieLayer = new plLayerAVI;
             moviePostfix = ST_LITERAL("_avi");
         }
+        else if (isWebm)
+        {
+            movieLayer = new plLayerWebM;
+            moviePostfix = ST_LITERAL("_webm");
+        }
 
         ST::string movieKeyName = layerIFace->GetKeyName() + moviePostfix;
         hsgResMgr::ResMgr()->NewKey(movieKeyName, movieLayer, node->GetLocation());
+
+        if (isWebm)
+        {
+            plLayerWebM* webmLayer = (plLayerWebM*)movieLayer;
+
+            // A representative world position for the (3D-positioned) audio -- the
+            // node this material layer is being converted for is as good as any.
+            Point3 pos = node->GetNodeTM(TimeValue(0)).GetTrans();
+            webmLayer->SetSoundPosition(hsPoint3(pos.x, pos.y, pos.z));
+
+            // If there's a "Sound 3D" component on the same node, reuse just its
+            // Min/Max Falloff Distance settings for the movie's audio (its own sound
+            // file, if any, is not used). Otherwise plLayerWebM's own defaults apply;
+            // either way this can still be changed later at runtime via ptLayerMovie.
+            for (int i = 0; i < node->NumAttachedComponents(); i++)
+            {
+                plComponentBase* comp = node->GetAttachedComponent(i);
+                int minDist, maxDist;
+                if (comp && plAudioComp::GetSound3DFalloffDistances(comp, minDist, maxDist))
+                {
+                    webmLayer->SetSoundFalloff(minDist, maxDist);
+                    break;
+                }
+            }
+        }
 
         movieLayer->SetMovieName(movieName);
         movieLayer->Eval(0,0,0);

@@ -134,6 +134,14 @@ install(
     TARGETS MaxMain
     DESTINATION "3dsmax${3dsm_DISPLAY_VERSION}"
 )
+# plasma_library() (unlike plasma_executable()'s INSTALL_PDB option) has no
+# built-in PDB installation, so without this, PlasmaMax.gup is always installed
+# without its matching debug symbols -- making crash dumps unsymbolicated.
+install(
+    FILES $<TARGET_PDB_FILE:MaxMain>
+    DESTINATION "3dsmax${3dsm_DISPLAY_VERSION}"
+    OPTIONAL
+)
 
 source_group("Header Files" FILES ${MaxMain_HEADERS})
 source_group("Resource Files" FILES ${MaxMain_RESOURCES})

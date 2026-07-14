@@ -84,6 +84,12 @@ namespace plAudioComp
 
     bool    IsSoundComponent(plComponentBase *comp);
     bool    IsLocalOnly( plComponentBase *comp );
+
+    // Returns true (and fills minDist/maxDist) if comp is a "Sound 3D" component --
+    // lets other exporters (e.g. the WebM movie-layer conversion in
+    // hsMaterialConverter.cpp) reuse just its Min/Max Falloff Distance settings,
+    // without requiring the whole plSound3DEmitterComponent class to be exposed.
+    bool    GetSound3DFalloffDistances(plComponentBase *comp, int &minDist, int &maxDist);
 };
 
 class plBaseSoundEmitterComponent : public plComponent

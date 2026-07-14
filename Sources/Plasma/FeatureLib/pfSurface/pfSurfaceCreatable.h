@@ -60,4 +60,7 @@ REGISTER_CREATABLE(plLayerAVI);
 #include "plLayerMovie.h"
 REGISTER_NONCREATABLE(plLayerMovie);
 
+#include "plLayerWebM.h"
+REGISTER_CREATABLE(plLayerWebM);
+
 #endif //  pfSurfaceCreatable_inc

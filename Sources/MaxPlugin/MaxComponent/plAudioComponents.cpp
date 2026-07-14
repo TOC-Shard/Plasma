@@ -1746,6 +1746,10 @@ public:
 
     bool    IsLocalOnly() const override { if (fCompPB->GetInt((ParamID)kSndIsLocalOnly)) return true; else return false; }
 
+    // Exposed for plAudioComp::GetSound3DFalloffDistances(), so other exporters can
+    // reuse just these two settings without needing this whole class declared.
+    int     GetFalloffMin() const { return fCompPB->GetInt((ParamID)kMinFallOffRad); }
+    int     GetFalloffMax() const { return fCompPB->GetInt((ParamID)kMaxFallOffRad); }
 
     bool    ConvertGrouped(plMaxNode *baseNode, std::vector<plBaseSoundEmitterComponent *> &groupArray, plErrorMsg *pErrMsg) override;
 
@@ -2042,6 +2046,17 @@ plSound3DEmitterComponent::plSound3DEmitterComponent()
 
 plSound3DEmitterComponent::~plSound3DEmitterComponent()
 {
+}
+
+bool plAudioComp::GetSound3DFalloffDistances(plComponentBase *comp, int &minDist, int &maxDist)
+{
+    if (!comp || comp->ClassID() != SOUND_3D_COMPONENT_ID)
+        return false;
+
+    plSound3DEmitterComponent *snd = (plSound3DEmitterComponent *)comp;
+    minDist = snd->GetFalloffMin();
+    maxDist = snd->GetFalloffMax();
+    return true;
 }
 
 //// IGetCategoryList ///////////////////////////////////////////////////////////////////////////

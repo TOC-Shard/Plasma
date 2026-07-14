@@ -5,6 +5,7 @@ set(pfSurface_SOURCES
     plGrabCubeMap.cpp
     plLayerAVI.cpp
     plLayerMovie.cpp
+    plLayerWebM.cpp
 )
 
 set(pfSurface_HEADERS
@@ -15,6 +16,7 @@ set(pfSurface_HEADERS
     plGrabCubeMap.h
     plLayerAVI.h
     plLayerMovie.h
+    plLayerWebM.h
 )
 
 plasma_library(pfSurface
@@ -32,12 +34,16 @@ target_link_libraries(
     PRIVATE
         pnNucleusInc
         pnSceneObject
+        plAudio
         plAvatar
         plDrawable
         plGImage
         plMessage
         plScene
         $<$<PLATFORM_ID:Windows>:vfw32>
+        $<$<BOOL:${USE_WEBM}>:libwebm::libwebm>
+        $<$<BOOL:${USE_WEBM}>:Opus::opus>
+        $<$<BOOL:${USE_WEBM}>:VPX::VPX>
     INTERFACE
         pnFactory
 )
