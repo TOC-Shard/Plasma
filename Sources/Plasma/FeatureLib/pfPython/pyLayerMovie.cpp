@@ -48,7 +48,6 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "pyLayerMovie.h"
 
 #include "plMessage/plLayerMovieMsg.h"
-#include "pnMessage/plEventCallbackMsg.h"
 
 #include "pyKey.h"
 
@@ -82,18 +81,30 @@ void pyLayerMovie::SetFalloff(int minDist, int maxDist)
     mov->Send();
 }
 
-void pyLayerMovie::AddCallback(pyKey& selfKey)
+void pyLayerMovie::SeekTo(float seconds)
 {
     if (!fLayerKey)
         return;
 
-    plEventCallbackMsg* cb = new plEventCallbackMsg(selfKey.getKey(), plEventCallbackMsg::kStop);
-
-    plLayerMovieMsg* mov = new plLayerMovieMsg(fLayerKey, plLayerMovieMsg::kAddCallback);
-    mov->SetCallback(cb); // refs cb itself
+    plLayerMovieMsg* mov = new plLayerMovieMsg(fLayerKey, plLayerMovieMsg::kSeek);
+    mov->SetSeekTime(seconds);
     mov->Send();
+}
 
-    hsRefCnt_SafeUnRef(cb); // drop our own temporary ownership from `new`
+float pyLayerMovie::GetPlaybackTime()
+{
+    if (!fLayerKey)
+        return 0.f;
+
+    // plMessage::Send() dispatches synchronously to a local (non-networked)
+    // receiver, so GetSeekTime() already holds the answer once Send() returns --
+    // SendAndKeep() (instead of plain Send()) keeps our own ref alive so we can
+    // still read it back afterward.
+    plLayerMovieMsg* mov = new plLayerMovieMsg(fLayerKey, plLayerMovieMsg::kGetCurrentTime);
+    mov->SendAndKeep();
+    float result = mov->GetSeekTime();
+    hsRefCnt_SafeUnRef(mov);
+    return result;
 }
 
 void pyLayerMovie::Play()

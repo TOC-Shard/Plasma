@@ -6043,7 +6043,8 @@ FONT 8, "MS Sans Serif"
 BEGIN
     LTEXT           "Video File:",IDC_STATIC,7,5,44,8
     CONTROL         "",IDC_COMP_WEBM_FILENAME_BTN,"CustButton",WS_TABSTOP,
-                    7,14,93,13
+                    7,14,65,13
+    PUSHBUTTON      "Clear",IDC_COMP_WEBM_FILENAME_CLEAR,74,14,27,13
     LTEXT           "Volume:",IDC_STATIC,9,32,26,8
     CONTROL         "Custom1",IDC_COMP_WEBM_VOLUME_EDIT,"CustEdit",
                     WS_TABSTOP,43,31,40,10

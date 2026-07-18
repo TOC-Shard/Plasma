@@ -3616,6 +3616,44 @@ class ptLayer:
         """Sets the ptImage texture of the layer"""
         ...
 
+class ptLayerMovie:
+    """Accessor class for a movie playing on a 3D object's material layer"""
+
+    def __init__(self, layerKey):
+        ...
+
+    def getCurrentTime(self):
+        """Returns the current playback position in seconds from the start"""
+        ...
+
+    def pause(self):
+        """Pauses the movie"""
+        ...
+
+    def play(self):
+        """Plays the movie from the beginning"""
+        ...
+
+    def resume(self):
+        """Resumes the movie from wherever it was paused"""
+        ...
+
+    def seekTo(self, seconds):
+        """Jumps to the given number of seconds from the start and keeps playing from there"""
+        ...
+
+    def setFalloff(self, minDist, maxDist):
+        """Sets the audio falloff distances (see ptAttribSound-style Sound 3D falloff)"""
+        ...
+
+    def setFilename(self, filename):
+        """Switches to a different movie file at runtime"""
+        ...
+
+    def stop(self):
+        """Stops the movie and rewinds to the beginning"""
+        ...
+
 class ptMarkerMgr:
     """Marker manager accessor class"""
 

@@ -92,7 +92,8 @@ public:
         kTypeClusterComponent,
         kTypeMaterialAnimation,
         kTypeGrassComponent,
-        kTypeLayer
+        kTypeLayer,
+        kTypeLayerMovie
     };
 
     plAutoUIParam(ParamID id, ST::string name);
@@ -307,6 +308,17 @@ class plPickWaterComponentButtonParam : public plPickButtonParam
 {
 public:
     plPickWaterComponentButtonParam(ParamID id, ST::string name);
+
+    bool IsMyMessage(UINT msg, WPARAM wParam, LPARAM lParam, IParamBlock2 *pb) override;
+
+    int GetParamType() override;
+    plComponentBase *GetComponent(IParamBlock2 *pb, int idx=0) override;
+};
+
+class plPickWebMComponentButtonParam : public plPickButtonParam
+{
+public:
+    plPickWebMComponentButtonParam(ParamID id, ST::string name);
 
     bool IsMyMessage(UINT msg, WPARAM wParam, LPARAM lParam, IParamBlock2 *pb) override;
 

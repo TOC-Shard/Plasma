@@ -1188,6 +1188,64 @@ bool plPickWaterComponentButtonParam::IsMyMessage(UINT msg, WPARAM wParam, LPARA
 ///////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////
 
+plPickWebMComponentButtonParam::plPickWebMComponentButtonParam(ParamID id, ST::string name) :
+    plPickButtonParam(id, std::move(name), nullptr, false)
+{
+}
+
+int plPickWebMComponentButtonParam::GetParamType()
+{
+    return kTypeLayerMovie;
+}
+
+plComponentBase* plPickWebMComponentButtonParam::GetComponent(IParamBlock2 *pb, int idx)
+{
+    hsAssert(idx == 0, "Pick buttons only have one key");
+    plMaxNode *node = (plMaxNode*)pb->GetReferenceTarget(fID);
+    if (node)
+        return node->ConvertToComponent();
+
+    return nullptr;
+}
+
+
+bool plPickWebMComponentButtonParam::IsMyMessage(UINT msg, WPARAM wParam, LPARAM lParam, IParamBlock2 *pb)
+{
+    if (msg == WM_COMMAND && HIWORD(wParam) == BN_BUTTONUP)
+    {
+        if ((HWND)lParam == fButton->GetHwnd())
+        {
+            if (fButton->IsChecked())
+            {
+                if (plPick::WebMComponent(pb, fID, true))
+                {
+                    INode *node = (INode*)pb->GetReferenceTarget(fID);
+                    if (node)
+                        fButton->SetText(node->GetName());
+                }
+                fButton->SetCheck(FALSE);
+            }
+
+            return true;
+        }
+    }
+    // check if the reset button is hit
+    if (msg == WM_COMMAND && HIWORD(wParam) == BN_CLICKED)
+    {
+        if ((HWND)lParam == fhRemove)
+        {
+            pb->SetValue(fID, 0, (ReferenceTarget*)nullptr);
+            fButton->SetText(_M("(none)"));
+            return true;
+        }
+    }
+
+    return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////
+
 plPickSwimCurrentInterfaceButtonParam::plPickSwimCurrentInterfaceButtonParam(ParamID id, ST::string name) :
     plPickButtonParam(id, std::move(name), nullptr, false)
 {

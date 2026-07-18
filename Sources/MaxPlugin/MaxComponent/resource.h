@@ -1895,6 +1895,7 @@
 #define IDC_COMP_WEBM_SOFTENABLE_CKBX   3373
 #define IDC_COMP_WEBM_SOFTREGION_BTN    3374
 #define IDS_COMP_WEBM_SOFTSELECT        3375
+#define IDC_COMP_WEBM_FILENAME_CLEAR    3376
 
 // Next default values for new objects
 // 

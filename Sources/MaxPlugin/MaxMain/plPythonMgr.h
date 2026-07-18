@@ -82,6 +82,7 @@ protected:
     void IAddMaterialAnimation(plAutoUIBlock *autoUI, PyObject *tuple, const ST::string& paramName, int id, int vid, std::unordered_set<ST::string> vstates);
     void IAddGrassComponent(plAutoUIBlock *autoUI, PyObject *objTuple, const ST::string& paramName, int id, int vid, std::unordered_set<ST::string> vstates);
     void IAddLayerComponent(plAutoUIBlock *autoUI, PyObject *objTuple, const ST::string& paramName, int id, int vid, std::unordered_set<ST::string> vstates);
+    void IAddLayerMovieComponent(plAutoUIBlock *autoUI, PyObject *objTuple, const ST::string& paramName, int id, int vid, std::unordered_set<ST::string> vstates);
 
 public:
     static plPythonMgr& Instance();

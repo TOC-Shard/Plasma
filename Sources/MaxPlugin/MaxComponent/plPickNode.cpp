@@ -349,3 +349,14 @@ bool plPick::GrassComponent(IParamBlock2 *pb, int paramID, bool single)
 
     return (GetCOREInterface()->DoHitByNameDialog(&pick) != 0);
 }
+
+#include "plWebMComponent.h"
+
+bool plPick::WebMComponent(IParamBlock2 *pb, int paramID, bool single)
+{
+    std::vector<Class_ID> cid;
+    cid.push_back(WEBM_COMPONENT_ID);
+    plPickNodeMax pick(pb, paramID, &cid, single, true);
+
+    return (GetCOREInterface()->DoHitByNameDialog(&pick) != 0);
+}

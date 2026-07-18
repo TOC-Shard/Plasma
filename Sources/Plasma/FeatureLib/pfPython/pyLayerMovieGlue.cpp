@@ -93,22 +93,21 @@ PYTHON_METHOD_DEFINITION(ptLayerMovie, setFalloff, args)
     PYTHON_RETURN_NONE;
 }
 
-PYTHON_METHOD_DEFINITION(ptLayerMovie, addCallback, args)
+PYTHON_METHOD_DEFINITION(ptLayerMovie, seekTo, args)
 {
-    PyObject* selfKeyObj = nullptr;
-    if (!PyArg_ParseTuple(args, "O", &selfKeyObj))
+    float seconds;
+    if (!PyArg_ParseTuple(args, "f", &seconds))
     {
-        PyErr_SetString(PyExc_TypeError, "addCallback expects a ptKey");
+        PyErr_SetString(PyExc_TypeError, "seekTo expects a float");
         PYTHON_RETURN_ERROR;
     }
-    if (!pyKey::Check(selfKeyObj))
-    {
-        PyErr_SetString(PyExc_TypeError, "addCallback expects a ptKey");
-        PYTHON_RETURN_ERROR;
-    }
-    pyKey* selfKey = pyKey::ConvertFrom(selfKeyObj);
-    self->fThis->AddCallback(*selfKey);
+    self->fThis->SeekTo(seconds);
     PYTHON_RETURN_NONE;
+}
+
+PYTHON_METHOD_DEFINITION_NOARGS(ptLayerMovie, getCurrentTime)
+{
+    return PyFloat_FromDouble(self->fThis->GetPlaybackTime());
 }
 
 PYTHON_BASIC_METHOD_DEFINITION(ptLayerMovie, play, Play)
@@ -119,7 +118,8 @@ PYTHON_BASIC_METHOD_DEFINITION(ptLayerMovie, stop, Stop)
 PYTHON_START_METHODS_TABLE(ptLayerMovie)
     PYTHON_METHOD(ptLayerMovie, setFilename, "Params: filename\nSwitches to a different movie file at runtime"),
     PYTHON_METHOD(ptLayerMovie, setFalloff, "Params: minDist,maxDist\nSets the audio falloff distances (see ptAttribSound-style Sound 3D falloff)"),
-    PYTHON_METHOD(ptLayerMovie, addCallback, "Params: selfKey\nNotifies selfKey once when the movie finishes playing"),
+    PYTHON_METHOD(ptLayerMovie, seekTo, "Params: seconds\nJumps to the given number of seconds from the start and keeps playing from there"),
+    PYTHON_METHOD_NOARGS(ptLayerMovie, getCurrentTime, "Returns the current playback position in seconds from the start"),
     PYTHON_BASIC_METHOD(ptLayerMovie, play, "Plays the movie from the beginning"),
     PYTHON_BASIC_METHOD(ptLayerMovie, pause, "Pauses the movie"),
     PYTHON_BASIC_METHOD(ptLayerMovie, resume, "Resumes the movie from wherever it was paused"),
@@ -134,6 +134,13 @@ PyObject* pyLayerMovie::New(pyKey& layerKey)
 {
     ptLayerMovie* newObj = (ptLayerMovie*)ptLayerMovie_type.tp_new(&ptLayerMovie_type, nullptr, nullptr);
     newObj->fThis->SetLayerKey(layerKey);
+    return (PyObject*)newObj;
+}
+
+PyObject* pyLayerMovie::New(plKey layerKey)
+{
+    ptLayerMovie* newObj = (ptLayerMovie*)ptLayerMovie_type.tp_new(&ptLayerMovie_type, nullptr, nullptr);
+    newObj->fThis->fLayerKey = std::move(layerKey);
     return (PyObject*)newObj;
 }
 

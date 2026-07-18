@@ -63,6 +63,9 @@ public:
         kStop           = 0x10,
         kAddCallback    = 0x20, // Call SetCallback() first
         kSetFalloff     = 0x40, // Call SetFalloff() first
+        kSeek           = 0x80, // Call SetSeekTime() first
+        kGetCurrentTime = 0x100, // Send() synchronously (see plLayerMovieMsg_inc comment
+                                  // below), then read the result back via GetSeekTime()
     };
 
 protected:
@@ -70,14 +73,15 @@ protected:
     plMessage*  fCallback;
     int         fFalloffMin;
     int         fFalloffMax;
+    float       fSeekTime;
     uint16_t    fCmd;
 
 public:
     plLayerMovieMsg(const plKey& receiver, uint16_t cmd)
-        : plMessage(nullptr, receiver, nullptr), fCallback(), fFalloffMin(), fFalloffMax(), fCmd(cmd)
+        : plMessage(nullptr, receiver, nullptr), fCallback(), fFalloffMin(), fFalloffMax(), fSeekTime(), fCmd(cmd)
     { }
 
-    plLayerMovieMsg() : fCallback(), fFalloffMin(), fFalloffMax(), fCmd()
+    plLayerMovieMsg() : fCallback(), fFalloffMin(), fFalloffMax(), fSeekTime(), fCmd()
     { }
 
     ~plLayerMovieMsg()
@@ -109,6 +113,12 @@ public:
     int GetFalloffMin() const { return fFalloffMin; }
     int GetFalloffMax() const { return fFalloffMax; }
     plLayerMovieMsg& SetFalloff(int minDist, int maxDist) { fFalloffMin = minDist; fFalloffMax = maxDist; return *this; }
+
+    // With kSeek: an in-param, set before Send(), seconds from the start of the
+    // movie to jump to. With kGetCurrentTime: an out-param, written by MsgReceive()
+    // and read back via GetSeekTime() once Send() returns (see kGetCurrentTime).
+    float GetSeekTime() const { return fSeekTime; }
+    plLayerMovieMsg& SetSeekTime(float t) { fSeekTime = t; return *this; }
 
     void Read(hsStream* s, hsResMgr* mgr) override { hsAssert(false, "Not for I/O"); plMessage::IMsgRead(s, mgr); }
     void Write(hsStream* s, hsResMgr* mgr) override { hsAssert(false, "Not for I/O"); plMessage::IMsgWrite(s, mgr); }

@@ -81,6 +81,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "plSurface/plGrassShaderMod.h"
 #include "plGrassComponent.h"
 #include "plSurface/plLayer.h"
+#include "plWebMComponent.h"
 
 #include "plMessageBox/hsMessageBox.h"
 
@@ -1001,6 +1002,21 @@ bool plPythonFileComponent::Convert(plMaxNode *node, plErrorMsg *pErrMsg)
                     if (key && plLayer::ConvertNoRef(key->GetObjectPtr()))
                     {
                         pyParam.SetToLayer(key);
+                        mod->AddParameter(pyParam);
+                    }
+                }
+            }
+            break;
+
+        case plAutoUIParam::kTypeLayerMovie:
+            {
+                plComponentBase* comp = param->GetComponent(pb, 0);
+                if (comp)
+                {
+                    plKey movieKey = plWebMComponent::GetMovieLayerKey(comp->GetINode());
+                    if (movieKey != nullptr)
+                    {
+                        pyParam.SetToLayerMovie(movieKey);
                         mod->AddParameter(pyParam);
                     }
                 }

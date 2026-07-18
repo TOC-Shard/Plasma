@@ -70,6 +70,9 @@ public:
     // required functions for PyObject interoperability
     PYTHON_CLASS_NEW_FRIEND(ptLayerMovie);
     static PyObject* New(pyKey& layerKey);
+    // Used internally by plPythonFileMod when delivering a ptAttribWebM parameter --
+    // not part of the scripting-facing API (that's __init__, which takes a ptKey).
+    static PyObject* New(plKey layerKey);
     PYTHON_CLASS_CHECK_DEFINITION; // returns true if the PyObject is a pyLayerMovie object
     PYTHON_CLASS_CONVERT_FROM_DEFINITION(pyLayerMovie); // converts a PyObject to a pyLayerMovie (throws error if not correct type)
 
@@ -84,9 +87,13 @@ public:
     // attenuating -- see plSound::SetMin()/SetMax().
     void SetFalloff(int minDist, int maxDist);
 
-    // Notified (via plEventCallbackMsg, sent to selfKey) once when the movie
-    // reaches the end of its playback.
-    void AddCallback(pyKey& selfKey);
+    // Jumps to the given number of seconds from the start of the movie and keeps
+    // playing from there -- doesn't change whether it's currently playing/paused.
+    void SeekTo(float seconds);
+
+    // Seconds from the start of the movie the layer is currently at. Correct even
+    // if the object is currently offscreen (see plLayerMovie::MsgReceive).
+    float GetPlaybackTime();
 
     void Play();
     void Pause();

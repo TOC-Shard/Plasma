@@ -47,6 +47,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 
 #include "plComponent.h"
 #include "plFileSystem.h"
+#include "pnKeyedObject/plKey.h"
 
 // Applies a WebM (VP9+Opus) video to the object's existing material as a texture
 // layer (see hsMaterialConverter::IProcessLayerMovie, which checks for this
@@ -69,6 +70,14 @@ public:
         kSoftRegion
     };
 
+protected:
+    // The plLayerWebM key created for this component during hsMaterialConverter::
+    // IProcessLayerMovie() (MakeMesh pass, runs before ConvertComponents) -- lets a
+    // Python File Component's ptAttribWebM attribute (resolved during its own later
+    // Convert()) find the actual movie layer via GetMovieLayerKey(), instead of the
+    // node's own key. See plWaterComponent::GetWaveSet() for the identical pattern.
+    plKey fMovieLayerKey;
+
 public:
     plWebMComponent();
 
@@ -83,6 +92,9 @@ public:
     bool       GetLoop() const     { return fCompPB->GetInt((ParamID)kLoop) != 0; }
     bool       GetSoftRegionEnable() const { return fCompPB->GetInt((ParamID)kSoftRegionEnable) != 0; }
     INode*     GetSoftRegionNode() const   { return fCompPB->GetINode((ParamID)kSoftRegion); }
+
+    void SetMovieLayerKey(plKey key) { fMovieLayerKey = std::move(key); }
+    static plKey GetMovieLayerKey(INode* node);
 };
 
 #endif // _plWebMComponent_h_inc_

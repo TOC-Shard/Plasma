@@ -906,6 +906,23 @@ class ptAttribLayer(ptAttribute):
         self.layer = ptLayer(value)
         self.value = self.layer
 
+# picks an object with a WebM Video component on it; self.value is a ptLayerMovie
+# for controlling playback. When the movie finishes, OnMovieNotify(self, id) is
+# called automatically (id == this attribute's id) -- no manual setup needed.
+# Note: unlike most other attribute types, the C++ side already delivers a
+# ready-to-use ptLayerMovie (not a bare ptKey), since it also needs to wire up
+# the OnMovieNotify callback there (see plPythonFileMod.cpp, kTypeLayerMovie).
+class ptAttribWebM(ptAttribute):
+    def __init__(self,id,name=None):
+        ptAttribute.__init__(self,id,name)
+        self.value = None
+        self.movie = None
+    def getdef(self):
+        return (self.id, self.name, 26)
+    def __setvalue__(self,value):
+        self.movie = value
+        self.value = self.movie
+
 
 #
 # ptModifier  - class for creating a Plasma modifier, such as a responder

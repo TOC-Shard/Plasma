@@ -61,6 +61,7 @@ namespace plPick
     bool Behavior(IParamBlock2 *pb, int paramID, bool single);
     bool GenericClass(IParamBlock2 *pb, int paramID, bool single, Class_ID classIDToPick );
     bool GrassComponent(IParamBlock2 *pb, int paramID, bool single);
+    bool WebMComponent(IParamBlock2 *pb, int paramID, bool single);
 
     // Basically the same as activator, but includes other things with built in detectors (ladder)
     // that you can enable/disable but shouldn't be triggering off of

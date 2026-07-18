@@ -170,6 +170,7 @@ enum ParamTypes
     kTypeMaterialAnimation, // 23
     kTypeGrassComponent,    // 24
     kTypeLayer,             // 25
+    kTypeLayerMovie,        // 26
 };
 
 bool IGetTupleInt(PyObject *tuple, int pos, int& val)
@@ -443,6 +444,10 @@ bool plPythonMgr::IQueryPythonFile(const ST::string& fileName)
                             case kTypeLayer:
                                 IAddLayerComponent(autoUI, ret, paramName, paramID, ddlParamID, vec);
                                 break;
+
+                            case kTypeLayerMovie:
+                                IAddLayerMovieComponent(autoUI, ret, paramName, paramID, ddlParamID, vec);
+                                break;
                             }
                         }
                     }
@@ -618,6 +623,11 @@ void plPythonMgr::IAddGrassComponent(plAutoUIBlock *autoUI, PyObject *objTuple, 
 void plPythonMgr::IAddLayerComponent(plAutoUIBlock* autoUI, PyObject* objTuple, const ST::string& paramName, int id, int vid, std::unordered_set<ST::string> vstates)
 {
     autoUI->AddPickLayerButton(id, {}, paramName, vid, std::move(vstates));
+}
+
+void plPythonMgr::IAddLayerMovieComponent(plAutoUIBlock* autoUI, PyObject* objTuple, const ST::string& paramName, int id, int vid, std::unordered_set<ST::string> vstates)
+{
+    autoUI->AddPickWebMComponentButton(id, {}, paramName, vid, std::move(vstates));
 }
 
 void plPythonMgr::LoadPythonFiles()

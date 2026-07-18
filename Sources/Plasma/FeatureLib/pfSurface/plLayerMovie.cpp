@@ -46,6 +46,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "hsGDeviceRef.h"
 #include "hsResMgr.h"
 #include "hsStream.h"
+#include "hsTimer.h"
 
 #include <string_theory/format>
 
@@ -260,6 +261,27 @@ bool plLayerMovie::MsgReceive(plMessage* msg)
 
         if (cmd & plLayerMovieMsg::kSetFalloff)
             ISetAudioFalloff(movieMsg->GetFalloffMin(), movieMsg->GetFalloffMax());
+
+        if (cmd & plLayerMovieMsg::kSeek)
+        {
+            // Doesn't touch play/pause state -- jumps the clock only. Whatever
+            // catch-up/rewind machinery IGetCurrentFrame() already has (see
+            // plLayerWebM) picks this up naturally on the next tick, forward or
+            // backward.
+            fTimeConvert.SetCurrentAnimTime(movieMsg->GetSeekTime(), true);
+        }
+
+        if (cmd & plLayerMovieMsg::kGetCurrentTime)
+        {
+            // WorldToAnimTimeNoUpdate() computes purely from the recorded Start()/
+            // Stop() state history (fStartWorldTime/fStartAnimTime) and the wall
+            // time given here -- unlike CurrentAnimTime(), it's NOT a stale cached
+            // field, so this is correct even if this layer hasn't been Eval()'d
+            // (e.g. offscreen) recently. Since this message is always sent+received
+            // synchronously within a single client (never over the network), the
+            // sender can read GetSeekTime() back immediately after Send() returns.
+            movieMsg->SetSeekTime(fTimeConvert.WorldToAnimTimeNoUpdate(hsTimer::GetSysSeconds()));
+        }
 
         return true;
     }

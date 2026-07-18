@@ -106,6 +106,7 @@ private:
         kfunc_OnAIMsg,
         kfunc_OnGameScoreMsg,
         kfunc_OnSubtitleMsg,
+        kfunc_OnMovieNotify,
         kfunc_lastone
     };
 

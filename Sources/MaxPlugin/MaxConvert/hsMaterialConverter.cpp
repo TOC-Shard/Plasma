@@ -2009,6 +2009,11 @@ static plLayerInterface* IProcessLayerMovie(plPassMtlBase* mtl, plLayerTex* layT
     {
         plLayerWebM* webmLayer = (plLayerWebM*)movieLayer;
 
+        // Lets a Python File Component's ptAttribWebM attribute (resolved later,
+        // during ConvertComponents) find this layer via plWebMComponent::
+        // GetMovieLayerKey() instead of the node's own key.
+        webmComp->SetMovieLayerKey(movieLayer->GetKey());
+
         // A representative world position for the (3D-positioned) audio -- the
         // node this material layer is being converted for is as good as any.
         Point3 pos = node->GetNodeTM(TimeValue(0)).GetTrans();

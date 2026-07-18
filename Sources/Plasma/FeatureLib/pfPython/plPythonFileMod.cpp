@@ -95,6 +95,8 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "plMessage/plLOSHitMsg.h"
 #include "plMessage/plRenderMsg.h"
 #include "pfMessage/pfMovieEventMsg.h"
+#include "plMessage/plLayerMovieMsg.h"
+#include "pnMessage/plEventCallbackMsg.h"
 #include "plMessage/plClimbEventMsg.h"
 #include "plMessage/plCaptureRenderMsg.h"
 #include "plMessage/plAccountUpdateMsg.h"
@@ -109,6 +111,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 
 #include "cyPythonInterface.h"
 #include "pySceneObject.h"
+#include "pyLayerMovie.h"
 #include "pyVault.h"
 #include "pyVaultNode.h"
 #include "pyVaultNodeRef.h"
@@ -184,6 +187,7 @@ const char* plPythonFileMod::fFunctionNames[] =
     "OnAIMsg",              // kfunc_OnAIMsg
     "OnGameScoreMsg",       // kfunc_OnGameScoreMsg
     "OnSubtitleMsg",        // kfunc_OnSubtitleMsg
+    "OnMovieNotify",        // kfunc_OnMovieNotify
     nullptr
 };
 
@@ -565,6 +569,25 @@ void plPythonFileMod::AddTarget(plSceneObject* sobj)
                             if (parameter.fObjectKey) {
                                 // create pyKey for the object
                                 value = pyKey::New(parameter.fObjectKey);
+                            }
+                            break;
+                        case plPythonParameter::kLayerMovie:
+                            if (parameter.fObjectKey) {
+                                value = pyLayerMovie::New(parameter.fObjectKey);
+
+                                // Automatically wire up a "movie finished" callback to
+                                // this script's OnMovieNotify(id) -- no manual
+                                // addCallback() call needed. fUser carries the
+                                // attribute's ID so scripts with multiple ptAttribWebM
+                                // attributes can tell them apart. Reuses the existing,
+                                // proven plAnimTimeConvert::AddCallback() mechanism via
+                                // plLayerMovieMsg::kAddCallback (see plLayerMovie::MsgReceive).
+                                plEventCallbackMsg* cb = new plEventCallbackMsg(GetKey(), plEventCallbackMsg::kStop,
+                                                                                 0, 0, -1, (uint16_t)parameter.fID);
+                                plLayerMovieMsg* addCb = new plLayerMovieMsg(parameter.fObjectKey, plLayerMovieMsg::kAddCallback);
+                                addCb->SetCallback(cb);
+                                addCb->Send();
+                                hsRefCnt_SafeUnRef(cb);
                             }
                             break;
                     }
@@ -1479,6 +1502,17 @@ bool plPythonFileMod::MsgReceive(plMessage* msg)
     if (moviemsg) {
         ICallScriptMethod(kfunc_OnMovieEvent, moviemsg->fMovieName.AsString(),
                           (int)moviemsg->fReason);
+        return true;
+    }
+
+    // are they looking for a plEventCallbackMsg from a ptAttribWebM movie layer
+    // finishing? (auto-wired in IHandleParameter() when the kLayerMovie parameter
+    // is delivered -- see plLayerMovieMsg::kAddCallback.) fUser carries the
+    // attribute's ID so a script with multiple ptAttribWebM attributes can tell
+    // them apart.
+    auto moviecb = IScriptWantsMsg<plEventCallbackMsg>(kfunc_OnMovieNotify, msg);
+    if (moviecb) {
+        ICallScriptMethod(kfunc_OnMovieNotify, (int)moviecb->fUser);
         return true;
     }
 

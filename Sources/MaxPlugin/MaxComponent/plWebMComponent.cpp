@@ -47,6 +47,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "plSoftVolumeComponent.h"
 #include "MaxMain/MaxAPI.h"
 #include "MaxMain/MaxCompat.h"
+#include "MaxMain/plMaxNode.h"
 
 #include "resource.h"
 
@@ -137,6 +138,12 @@ namespace
                     ISelectWebMFile(comp, hWnd, IDC_COMP_WEBM_FILENAME_BTN);
                     return TRUE;
                 }
+                if (LOWORD(wParam) == IDC_COMP_WEBM_FILENAME_CLEAR)
+                {
+                    comp->SetFileName(_T(""));
+                    IUpdateWebMButton(comp, hWnd, IDC_COMP_WEBM_FILENAME_BTN);
+                    return TRUE;
+                }
                 break;
             }
 
@@ -180,12 +187,12 @@ ParamBlockDesc2 gWebMBk
         p_end,
 
     plWebMComponent::kAutoStart, _T("autoStart"), TYPE_BOOL, 0, 0,
-        p_default, TRUE,
+        p_default, FALSE,
         p_ui, TYPE_SINGLECHEKBOX, IDC_COMP_WEBM_AUTOSTART_CKBX,
         p_end,
 
     plWebMComponent::kLoop, _T("loop"), TYPE_BOOL, 0, 0,
-        p_default, TRUE,
+        p_default, FALSE,
         p_ui, TYPE_SINGLECHEKBOX, IDC_COMP_WEBM_LOOP_CKBX,
         p_end,
 
@@ -205,4 +212,19 @@ plWebMComponent::plWebMComponent()
 {
     fClassDesc = &gWebMComponentDesc;
     fClassDesc->MakeAutoParamBlocks(this);
+}
+
+plKey plWebMComponent::GetMovieLayerKey(INode* node)
+{
+    if (!node)
+        return nullptr;
+
+    plComponentBase* comp = ((plMaxNodeBase*)node)->ConvertToComponent();
+    if (!comp)
+        return nullptr;
+
+    if (comp->ClassID() != WEBM_COMPONENT_ID)
+        return nullptr;
+
+    return ((plWebMComponent*)comp)->fMovieLayerKey;
 }
