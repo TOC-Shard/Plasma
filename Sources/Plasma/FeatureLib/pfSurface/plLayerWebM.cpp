@@ -67,6 +67,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 
 #include "HeadSpin.h"
 #include "hsResMgr.h"
+#include "hsSIMD.h"
 #include "hsTimer.h"
 
 #include "plAudio/plAudioSystem.h"
@@ -107,23 +108,93 @@ namespace
         return static_cast<uint8_t>(val);
     }
 
-    // Same I420->RGBA math as plPlanarImage::Yuv420ToRgba().
+    constexpr int32_t YG = 74;
+    constexpr int32_t UB = 127, UG = -25, UR = 0;
+    constexpr int32_t VB = 0, VG = -52, VR = 102;
+    constexpr int32_t BB = UB * 128 + VB * 128;
+    constexpr int32_t BG = UG * 128 + VG * 128;
+    constexpr int32_t BR = UR * 128 + VR * 128;
+
+#ifdef HAVE_AVX2
+    // Vectorized over 8 columns/pixels at a time using 32-bit lanes (16-bit lanes
+    // would overflow: e.g. u*UB - BB + y1 can reach ~33800 in magnitude, past
+    // int16 range). Each U/V byte covers 2 columns (4:2:0 subsampling), so 4 real
+    // samples get duplicated into 8 lanes via a permute. Falls back to the plain
+    // scalar loop below for the last (w % 8) columns of each row.
+    void IYuv420ToRgbaRow8Wide(const uint8_t* yRow, const uint8_t* uRow, const uint8_t* vRow, uint8_t* destRow, uint32_t j)
+    {
+        const __m256i dupIdx = _mm256_setr_epi32(0, 0, 1, 1, 2, 2, 3, 3);
+        const __m256i vYG = _mm256_set1_epi32(YG);
+        const __m256i v16 = _mm256_set1_epi32(16);
+        const __m256i vUB = _mm256_set1_epi32(UB), vUG = _mm256_set1_epi32(UG), vUR = _mm256_set1_epi32(UR);
+        const __m256i vVB = _mm256_set1_epi32(VB), vVG = _mm256_set1_epi32(VG), vVR = _mm256_set1_epi32(VR);
+        const __m256i vBB = _mm256_set1_epi32(BB), vBG = _mm256_set1_epi32(BG), vBR = _mm256_set1_epi32(BR);
+        const __m256i vZero = _mm256_setzero_si256();
+        const __m256i v255 = _mm256_set1_epi32(255);
+
+        __m128i yBytes = _mm_loadl_epi64(reinterpret_cast<const __m128i*>(yRow + j));
+        __m256i yVals = _mm256_cvtepu8_epi32(yBytes);
+
+        // Read exactly 4 bytes (not 8) -- reading a full 8-byte lane here would run
+        // past the end of the U/V plane's row on the last iteration of a row.
+        __m128i uBytes4 = _mm_cvtsi32_si128(*reinterpret_cast<const int32_t*>(uRow + j / 2));
+        __m256i uVals = _mm256_permutevar8x32_epi32(_mm256_cvtepu8_epi32(uBytes4), dupIdx);
+
+        __m128i vBytes4 = _mm_cvtsi32_si128(*reinterpret_cast<const int32_t*>(vRow + j / 2));
+        __m256i vVals = _mm256_permutevar8x32_epi32(_mm256_cvtepu8_epi32(vBytes4), dupIdx);
+
+        __m256i y1 = _mm256_mullo_epi32(_mm256_sub_epi32(yVals, v16), vYG);
+
+        __m256i r = _mm256_srai_epi32(_mm256_add_epi32(_mm256_sub_epi32(_mm256_add_epi32(
+            _mm256_mullo_epi32(uVals, vUB), _mm256_mullo_epi32(vVals, vVB)), vBB), y1), 6);
+        __m256i g = _mm256_srai_epi32(_mm256_add_epi32(_mm256_sub_epi32(_mm256_add_epi32(
+            _mm256_mullo_epi32(uVals, vUG), _mm256_mullo_epi32(vVals, vVG)), vBG), y1), 6);
+        __m256i b = _mm256_srai_epi32(_mm256_add_epi32(_mm256_sub_epi32(_mm256_add_epi32(
+            _mm256_mullo_epi32(uVals, vUR), _mm256_mullo_epi32(vVals, vVR)), vBR), y1), 6);
+
+        r = _mm256_min_epi32(_mm256_max_epi32(r, vZero), v255);
+        g = _mm256_min_epi32(_mm256_max_epi32(g, vZero), v255);
+        b = _mm256_min_epi32(_mm256_max_epi32(b, vZero), v255);
+
+        int32_t rArr[8], gArr[8], bArr[8];
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(rArr), r);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(gArr), g);
+        _mm256_storeu_si256(reinterpret_cast<__m256i*>(bArr), b);
+
+        uint8_t* d = destRow + (size_t)j * 4;
+        for (int k = 0; k < 8; ++k)
+        {
+            d[k * 4 + 0] = (uint8_t)rArr[k];
+            d[k * 4 + 1] = (uint8_t)gArr[k];
+            d[k * 4 + 2] = (uint8_t)bArr[k];
+            d[k * 4 + 3] = 0xff;
+        }
+    }
+#endif
+
+    // Same I420->RGBA math as plPlanarImage::Yuv420ToRgba(), vectorized (see
+    // IYuv420ToRgbaRow8Wide above) -- the original is a fully scalar per-pixel
+    // loop, which became a measurable per-frame CPU cost (visible as stutter
+    // while a movie is onscreen) once WebM added continuous, possibly 720p/30fps
+    // decoding on top of what used to be occasional short AVI intro playback.
     void Yuv420ToRgba(uint32_t w, uint32_t h, const int32_t* stride, uint8_t** planes, uint8_t* const dest)
     {
         const uint8_t* y_src = planes[0];
         const uint8_t* u_src = planes[1];
         const uint8_t* v_src = planes[2];
 
-        constexpr int32_t YG = 74;
-        constexpr int32_t UB = 127, UG = -25, UR = 0;
-        constexpr int32_t VB = 0, VG = -52, VR = 102;
-        constexpr int32_t BB = UB * 128 + VB * 128;
-        constexpr int32_t BG = UG * 128 + VG * 128;
-        constexpr int32_t BR = UR * 128 + VR * 128;
-
         for (uint32_t i = 0; i < h; ++i)
         {
-            for (uint32_t j = 0; j < w; ++j)
+            uint32_t j = 0;
+#ifdef HAVE_AVX2
+            const uint8_t* yRow = y_src + (size_t)stride[0] * i;
+            const uint8_t* uRow = u_src + (size_t)stride[1] * (i / 2);
+            const uint8_t* vRow = v_src + (size_t)stride[2] * (i / 2);
+            uint8_t* destRow = dest + (size_t)w * i * 4;
+            for (; j + 8 <= w; j += 8)
+                IYuv420ToRgbaRow8Wide(yRow, uRow, vRow, destRow, j);
+#endif
+            for (; j < w; ++j)
             {
                 size_t y_idx = stride[0] * i + j;
                 size_t u_idx = stride[1] * (i / 2) + (j / 2);
@@ -143,16 +214,23 @@ namespace
         }
     }
 
-// Thin RAII wrapper matching plMoviePlayer's plVPXMovieFrame ownership semantics
-// exactly (vpx_img_free() on the decoded frame), rather than assuming we know
-// libvpx's internal buffer-ownership rules better than the already-proven code.
+// Non-owning view of a decoded frame. vpx_codec_get_frame() returns a pointer
+// into the decoder's own internal buffer pool -- per libvpx's documented
+// contract, it belongs to the codec context, stays valid only until the next
+// vpx_codec_decode() call, and must NOT be passed to vpx_img_free() (that's
+// only for images the caller allocated itself via vpx_img_alloc(), e.g. for
+// encoding). plMoviePlayer's plVPXMovieFrame calls vpx_img_free() on it anyway
+// -- likely an unnoticed pre-existing bug there too, since short intro movies
+// rarely decode enough frames in a row to reveal the resulting heap corruption
+// (freeing memory the decoder still owns and will write into again on a later
+// frame). We copy the pixels out via Yuv420ToRgba() before the next decode, so
+// there's nothing left to release here.
 // (Kept in this same anonymous namespace, along with VPX/TrackMgr below, so a
 // UNITY_BUILD of pfSurface can never collide with a same-named type elsewhere.)
 struct VpxFrame
 {
     vpx_image_t* fImage;
     VpxFrame(vpx_image_t* img) : fImage(img) { }
-    ~VpxFrame() { if (fImage) vpx_img_free(fImage); }
 };
 
 class VPX
@@ -194,7 +272,6 @@ public:
             return nullptr;
         if (img->fmt != VPX_IMG_FMT_I420) {
             hsAssert(0, "VPX decoded a frame in an unexpected format");
-            vpx_img_free(img);
             return nullptr;
         }
         return std::make_unique<VpxFrame>(img);
@@ -225,9 +302,10 @@ protected:
     const mkvparser::Track* fTrack;
     const mkvparser::BlockEntry* fCurrentBlock;
     int32_t fStatus;
+    bool fEverReturnedFrame;
 
 public:
-    TrackMgr(const mkvparser::Track* track) : fTrack(track), fCurrentBlock(), fStatus() { }
+    TrackMgr(const mkvparser::Track* track) : fTrack(track), fCurrentBlock(), fStatus(), fEverReturnedFrame() { }
 
     const mkvparser::Track* GetTrack() { return fTrack; }
 
@@ -241,7 +319,14 @@ public:
         while (fCurrentBlock && fStatus == 0) {
             const mkvparser::Block* block = fCurrentBlock->GetBlock();
             int64_t time = block->GetTime(fCurrentBlock->GetCluster()) - fTrack->GetCodecDelay();
-            if (time <= movieTimeNs) {
+            // Always take the very first block regardless of its exact timestamp --
+            // a fresh seek/rewind (e.g. plLayerMovieMsg::kStop, always targeting
+            // exactly 0ns) needs *something* to decode immediately, and the first
+            // frame's PTS isn't guaranteed to be exactly 0. Without this, a rewind to
+            // a target before the first frame's real timestamp gets zero frames back
+            // and, since the layer then sits stopped forever, never gets another
+            // chance to retry -- the previous image just stays on screen forever.
+            if (time <= movieTimeNs || !fEverReturnedFrame) {
                 bool isKey = block->IsKey();
                 for (int32_t i = 0; i < block->GetFrameCount(); i++) {
                     const mkvparser::Block::Frame data = block->GetFrame(i);
@@ -249,6 +334,7 @@ public:
                     data.Read(reader, buf.get());
                     frames.push_back({std::move(buf), static_cast<int32_t>(data.len), isKey, time});
                 }
+                fEverReturnedFrame = true;
                 fStatus = int32_t(fTrack->GetNext(fCurrentBlock, fCurrentBlock));
             } else {
                 return true; // caught up to movieTimeNs, more may come later

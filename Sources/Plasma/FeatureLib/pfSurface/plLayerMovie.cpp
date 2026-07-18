@@ -60,7 +60,8 @@ plLayerMovie::plLayerMovie()
 :   fCurrentFrame(-1),
     fLength(0),
     fWidth(32),
-    fHeight(32)
+    fHeight(32),
+    fLoggedIdle(false)
 {
     fOwnedChannels |= kTexture;
     fTexture = new plBitmap*;
@@ -84,6 +85,17 @@ bool plLayerMovie::ISetFault(const char* errStr)
 bool plLayerMovie::ISetLength(float secs)
 {
     fLength = secs;
+
+    // Mirrors the one-time setup in hsMaterialConverter.cpp's IProcessLayerMovie().
+    // That only runs at export time, when a file was actually picked -- for a movie
+    // set later at runtime (e.g. via setFilename() with no file picked in Max), the
+    // exported fTimeConvert is otherwise stuck with Begin==End==0 forever, so Start()
+    // never actually advances anything. Redoing it here whenever the real length
+    // becomes known (export or runtime) keeps both paths correct.
+    fTimeConvert.SetBegin(0);
+    fTimeConvert.SetEnd(secs);
+    fTimeConvert.SetLoopPoints(0, secs);
+
     return false;
 }
 
@@ -108,6 +120,21 @@ bool plLayerMovie::ISetSize(int width, int height)
 
 bool plLayerMovie::ISetupBitmap()
 {
+    // Switching to a different movie (setFilename() mid-session) can mean a different
+    // resolution -- ISetSize() already updated fWidth/fHeight by this point (called
+    // from IInit(), which always runs before ICheckBitmap()/ISetupBitmap() each tick),
+    // but the old bitmap itself is still whatever size the *previous* movie needed.
+    // Without this, the decoder writes the new (possibly larger) frame into a buffer
+    // sized for the old one -- a heap buffer overflow.
+    if( plMipmap* existing = plMipmap::ConvertNoRef(GetTexture()) )
+    {
+        if( (uint32_t)existing->GetWidth() != fWidth || (uint32_t)existing->GetHeight() != fHeight )
+        {
+            delete existing;
+            *fTexture = nullptr;
+        }
+    }
+
     if( !GetTexture() )
     {
         plMipmap* b = new plMipmap( fWidth, fHeight, plMipmap::kARGB32Config, 1 );
@@ -125,8 +152,11 @@ bool plLayerMovie::ISetupBitmap()
 
 bool plLayerMovie::ICheckBitmap()
 {
-    if( !GetTexture() )
-        ISetupBitmap();
+    // Always call through, not just when there's no texture yet -- ISetupBitmap()
+    // itself now also handles the "existing texture is the wrong size" case (e.g.
+    // switching to a different movie mid-session via setFilename()), which would
+    // never get a chance to run if gated behind !GetTexture() here.
+    ISetupBitmap();
 
     return false;
 }
@@ -156,7 +186,9 @@ uint32_t plLayerMovie::Eval(double wSecs, uint32_t frame, uint32_t ignore)
     if( !IGetFault() && !(ignore & kTexture) )
     {
         if( ICurrentFrameDirty(wSecs) )
-        {           
+        {
+            fLoggedIdle = false;
+
             if( IGetCurrentFrame() )
                 ISetFault("Getting current frame");
 
@@ -168,10 +200,11 @@ uint32_t plLayerMovie::Eval(double wSecs, uint32_t frame, uint32_t ignore)
             }
         }
         else
-        if( IsStopped() )
+        if( IsStopped() && !fLoggedIdle )
         {
             plStatusLog::AddLineSF("movie.log", "{}: idling (IsStopped()==true) at frame {}", fMovieName, fCurrentFrame);
             IMovieIsIdle();
+            fLoggedIdle = true;
         }
         
         dirty |= kTexture;
@@ -193,7 +226,9 @@ void plLayerMovie::Read(hsStream* s, hsResMgr* mgr)
     }
     else
     {
-        hsAssert(false, "Reading empty string for movie name");
+        // Valid and expected for a WebM layer exported with no file picked yet (see
+        // hsMaterialConverter.cpp's IProcessLayerMovie) -- the movie gets set later
+        // at runtime via setFilename().
         fMovieName = "";
     }
 }

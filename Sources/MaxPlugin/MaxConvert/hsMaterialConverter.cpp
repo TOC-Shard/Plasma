@@ -1979,7 +1979,11 @@ static plLayerInterface* IProcessLayerMovie(plPassMtlBase* mtl, plLayerTex* layT
     plFileName webmFileName = webmComp ? webmComp->GetFileName() : plFileName();
 
     bool isAvi  = aviFileName.IsValid();
-    bool isWebm = !isAvi && webmFileName.IsValid();
+    // No file needs to be picked in the component itself -- a Python script can set
+    // one later at runtime via ptLayerMovie.setFilename(). The layer just starts out
+    // idle/faulted (see plLayerWebM::IInit()'s "Movie file does not exist" handling)
+    // until then.
+    bool isWebm = !isAvi && webmComp != nullptr;
     if (!isAvi && !isWebm)
         return layerIFace;
 
@@ -2075,8 +2079,16 @@ static plLayerInterface* IProcessLayerMovie(plPassMtlBase* mtl, plLayerTex* layT
         }
     }
 
-    movieLayer->SetMovieName(movieName);
-    movieLayer->Eval(0,0,0);
+    if (fileName.IsValid())
+    {
+        // Skip this if no file is picked yet (webm-without-file case) -- Eval()
+        // immediately tries to open+parse the movie via IGetCurrentFrame()/IInit(),
+        // and an empty filename resolves to just the "avi" subfolder itself, which
+        // exists as a directory and defeats plLayerWebM::IInit()'s "does the movie
+        // file exist" guard, so opening it hard-asserts instead of failing gracefully.
+        movieLayer->SetMovieName(movieName);
+        movieLayer->Eval(0,0,0);
+    }
 
     tc.SetLoopPoints(0, movieLayer->GetLength());
     tc.SetBegin(0);

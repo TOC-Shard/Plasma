@@ -59,6 +59,7 @@ protected:
     int32_t                     fCurrentFrame;
     float                       fLength;
     uint32_t                    fWidth, fHeight;
+    bool                        fLoggedIdle; // avoid re-logging/re-releasing every frame while stopped
 
     virtual int32_t             ISecsToFrame(float secs) = 0;
 
