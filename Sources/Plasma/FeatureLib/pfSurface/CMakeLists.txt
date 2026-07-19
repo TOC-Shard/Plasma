@@ -17,6 +17,7 @@ set(pfSurface_HEADERS
     plLayerAVI.h
     plLayerMovie.h
     plLayerWebM.h
+    plLayerWebM_AVX2.h
 )
 
 plasma_library(pfSurface
@@ -25,6 +26,9 @@ plasma_library(pfSurface
     UNITY_BUILD
     PRECOMPILED_HEADERS Pch.h
 )
+# GCC/Clang (unlike MSVC) need the whole translation unit compiled with -mavx2
+# before AVX2 intrinsics can be used at all -- see plLayerWebM_AVX2.h's comment.
+plasma_target_simd_sources(pfSurface AVX2 plLayerWebM_AVX2.cpp)
 target_link_libraries(
     pfSurface
     PUBLIC
