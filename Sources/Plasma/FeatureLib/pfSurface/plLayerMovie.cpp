@@ -311,6 +311,25 @@ bool plLayerMovie::MsgReceive(plMessage* msg)
             fTimeConvert.SetCurrentAnimTime(movieMsg->GetSeekTime(), true);
         }
 
+        if (cmd & (plLayerMovieMsg::kPlay | plLayerMovieMsg::kResume | plLayerMovieMsg::kSeek) && !IsStopped())
+        {
+            // Bootstrap/catch-up right now instead of waiting for the next Eval() --
+            // Eval() (and thus IGetCurrentFrame(), which does IInit()'s file-open and
+            // audio setup on first call) only runs while this layer's material is
+            // actually being drawn. A late joiner whose camera isn't pointed at the
+            // movie screen yet would otherwise never get a single Eval() with the
+            // correct playing state: Eval() might fire once beforehand with the
+            // still-stopped state (this message hasn't been processed yet), go idle,
+            // and release -- with nothing left to ever retrigger it, since the
+            // visibility-independent plTimeMsg tick (see plLayerWebM.cpp) itself only
+            // gets registered from inside IGetCurrentFrame(), which never got to run.
+            float secs = fTimeConvert.WorldToAnimTimeNoUpdate(hsTimer::GetSysSeconds());
+            fCurrentFrame = ISecsToFrame(secs);
+            fLoggedIdle = false;
+            if (IGetCurrentFrame())
+                ISetFault("Getting current frame");
+        }
+
         return true;
     }
 
