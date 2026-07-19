@@ -47,6 +47,7 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 
 #include "pyLayerMovie.h"
 
+#include "pfSurface/plLayerMovie.h"
 #include "plMessage/plLayerMovieMsg.h"
 
 #include "pyKey.h"
@@ -96,15 +97,18 @@ float pyLayerMovie::GetPlaybackTime()
     if (!fLayerKey)
         return 0.f;
 
-    // plMessage::Send() dispatches synchronously to a local (non-networked)
-    // receiver, so GetSeekTime() already holds the answer once Send() returns --
-    // SendAndKeep() (instead of plain Send()) keeps our own ref alive so we can
-    // still read it back afterward.
-    plLayerMovieMsg* mov = new plLayerMovieMsg(fLayerKey, plLayerMovieMsg::kGetCurrentTime);
-    mov->SendAndKeep();
-    float result = mov->GetSeekTime();
-    hsRefCnt_SafeUnRef(mov);
-    return result;
+    // NOT a plLayerMovieMsg round-trip (that was the original approach here) --
+    // plDispatch::IMsgDispatch() silently defers any message sent while a dispatch
+    // is already in progress (its fMsgActive reentrancy guard), which is *always*
+    // the case when called from a Python ptModifier callback (OnNotify, AvatarPage,
+    // etc. all run from inside message dispatch). Send()/SendAndKeep() would
+    // return before the reply was ever filled in, so GetSeekTime() read back the
+    // message's stale default (0) instead of the real value -- confirmed via the
+    // engine actually computing the correct time (just too late to matter, since
+    // nothing was still waiting for it). A direct call sidesteps the whole problem.
+    if (plLayerMovie* layer = plLayerMovie::ConvertNoRef(fLayerKey->ObjectIsLoaded()))
+        return layer->GetPlaybackTime();
+    return 0.f;
 }
 
 void pyLayerMovie::Play()

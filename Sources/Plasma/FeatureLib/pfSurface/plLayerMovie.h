@@ -107,6 +107,16 @@ public:
     int                     GetHeight() const;
     float                   GetLength() const { return fLength; }
 
+    // Seconds from the start of the movie the layer is currently at. Correct even
+    // if the object is currently offscreen (see plAnimTimeConvert::WorldToAnimTimeNoUpdate()).
+    // A direct call, not a plLayerMovieMsg round-trip: the message-queue reentrancy
+    // guard (plDispatch::IMsgDispatch()'s fMsgActive check) silently defers any
+    // message sent while already inside message dispatch -- which Python ptModifier
+    // callbacks (OnNotify, AvatarPage, etc.) always are -- so a caller reading the
+    // reply immediately after Send()/SendAndKeep() would get a stale default value
+    // instead of the real one.
+    float                   GetPlaybackTime() const;
+
     virtual void            DefaultMovie();
 };
 

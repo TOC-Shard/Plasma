@@ -322,6 +322,7 @@ target_link_libraries(
         pfJournalBook
         pfLocalizationMgr
         pfMessage
+        pfSurface
         Python3::Python
     INTERFACE
         pnFactory

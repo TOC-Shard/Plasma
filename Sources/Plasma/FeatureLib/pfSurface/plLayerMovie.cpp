@@ -111,6 +111,11 @@ int plLayerMovie::GetHeight() const
     return mip ? mip->GetHeight() : 0;
 }
 
+float plLayerMovie::GetPlaybackTime() const
+{
+    return fTimeConvert.WorldToAnimTimeNoUpdate(hsTimer::GetSysSeconds());
+}
+
 bool plLayerMovie::ISetSize(int width, int height)
 {
     fWidth = width;
@@ -304,18 +309,6 @@ bool plLayerMovie::MsgReceive(plMessage* msg)
             // plLayerWebM) picks this up naturally on the next tick, forward or
             // backward.
             fTimeConvert.SetCurrentAnimTime(movieMsg->GetSeekTime(), true);
-        }
-
-        if (cmd & plLayerMovieMsg::kGetCurrentTime)
-        {
-            // WorldToAnimTimeNoUpdate() computes purely from the recorded Start()/
-            // Stop() state history (fStartWorldTime/fStartAnimTime) and the wall
-            // time given here -- unlike CurrentAnimTime(), it's NOT a stale cached
-            // field, so this is correct even if this layer hasn't been Eval()'d
-            // (e.g. offscreen) recently. Since this message is always sent+received
-            // synchronously within a single client (never over the network), the
-            // sender can read GetSeekTime() back immediately after Send() returns.
-            movieMsg->SetSeekTime(fTimeConvert.WorldToAnimTimeNoUpdate(hsTimer::GetSysSeconds()));
         }
 
         return true;

@@ -64,8 +64,6 @@ public:
         kAddCallback    = 0x20, // Call SetCallback() first
         kSetFalloff     = 0x40, // Call SetFalloff() first
         kSeek           = 0x80, // Call SetSeekTime() first
-        kGetCurrentTime = 0x100, // Send() synchronously (see plLayerMovieMsg_inc comment
-                                  // below), then read the result back via GetSeekTime()
     };
 
 protected:
@@ -114,9 +112,7 @@ public:
     int GetFalloffMax() const { return fFalloffMax; }
     plLayerMovieMsg& SetFalloff(int minDist, int maxDist) { fFalloffMin = minDist; fFalloffMax = maxDist; return *this; }
 
-    // With kSeek: an in-param, set before Send(), seconds from the start of the
-    // movie to jump to. With kGetCurrentTime: an out-param, written by MsgReceive()
-    // and read back via GetSeekTime() once Send() returns (see kGetCurrentTime).
+    // With kSeek: seconds from the start of the movie to jump to, set before Send().
     float GetSeekTime() const { return fSeekTime; }
     plLayerMovieMsg& SetSeekTime(float t) { fSeekTime = t; return *this; }
 

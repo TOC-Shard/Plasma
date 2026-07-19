@@ -373,7 +373,7 @@ struct plWebMMovieInfo
 // =====================================================
 
 plLayerWebM::plLayerWebM()
-    : fWebMInfo(new plWebMMovieInfo), fHasSoundPos(), fFalloffMin(1), fFalloffMax(1000000000), fVolume(1.f), fSoftRegion(), fLastLoggedStrength(-1.f), fRegisteredForTime()
+    : fWebMInfo(new plWebMMovieInfo), fHasSoundPos(), fFalloffMin(1), fFalloffMax(1000000000), fVolume(1.f), fSoftRegion(), fRegisteredForTime()
 { }
 
 plLayerWebM::~plLayerWebM()
@@ -687,11 +687,6 @@ void plLayerWebM::IApplyAudioSettings()
     // outside a picked Soft Region, unlike the asymptotic min/max falloff, which
     // never quite reaches zero -- see plSoftVolume::GetStrength().
     float regionStrength = fSoftRegion ? fSoftRegion->GetStrength(plgAudioSys::GetCurrListenerPos()) : 1.f;
-    if (regionStrength != fLastLoggedStrength) {
-        plStatusLog::AddLineSF("movie.log", "{}: soft region strength = {} (region {})",
-                                fMovieName, regionStrength, fSoftRegion ? "present" : "not set");
-        fLastLoggedStrength = regionStrength;
-    }
     float gain = plgAudioSys::IsMuted() ? 0.f : plgAudioSys::GetChannelVolume(plgAudioSys::kSoundFX) * fVolume * regionStrength;
     alSourcef(fWebMInfo->fALSource, AL_GAIN, gain);
 #endif

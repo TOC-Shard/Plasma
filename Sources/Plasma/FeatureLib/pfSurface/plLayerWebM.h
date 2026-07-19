@@ -70,7 +70,6 @@ protected:
     int                 fFalloffMax;
     float               fVolume;
     plSoftVolume*       fSoftRegion; // non-owning; ref tracked via the resmgr like plSound::fSoftRegion
-    float               fLastLoggedStrength; // debug only, not serialized -- see IApplyAudioSettings()
     bool                fRegisteredForTime; // see IInit()/ICloseMovie() -- keeps gain (mute/volume/soft region)
                                              // updating every frame regardless of whether this layer's material
                                              // is actually being Eval()'d (i.e. even while the object is offscreen)
