@@ -226,6 +226,11 @@ def parse_type_from_doc(doc: str) -> tuple[str, str]:
         # Example: "Params: x,y"
         params_line, _, doc_body = doc.partition("\n")
         params = params_line.removeprefix(docstring_params_prefix)
+        # A few C++ docstrings mark optional trailing params with brackets, e.g.
+        # "url[, volume[, minDist[, maxDist]]]" -- that's not valid in an actual
+        # function signature, so drop the brackets rather than emit invalid syntax
+        # like "def f(self, url[, volume])".
+        params = params.replace("[", "").replace("]", "")
         # Put a space after each comma if there isn't one already.
         # Semi-temporarily doing this using a regex replacement here
         # so that we don't have to immediately adjust all the old C++-defined docstrings.

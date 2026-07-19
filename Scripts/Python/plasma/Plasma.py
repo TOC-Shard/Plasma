@@ -1453,7 +1453,7 @@ class ptAudioControl:
         """Mutes all sounds."""
         ...
 
-    def playNetStream(self, url[, volume]):
+    def playNetStream(self, url, volume):
         """Starts playing a live HTTP/MP3 audio stream. Returns True on success."""
         ...
 
@@ -4434,7 +4434,7 @@ class ptSceneobject:
         """Run the attached responder to the specified state"""
         ...
 
-    def setNetStream(self, url[, volume[, minDist[, maxDist]]]):
+    def setNetStream(self, url, volume, minDist, maxDist):
         """Starts a live HTTP/MP3 audio stream at this object's 3D position."""
         ...
 
