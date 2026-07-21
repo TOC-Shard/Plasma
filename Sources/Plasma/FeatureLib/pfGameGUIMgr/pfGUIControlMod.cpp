@@ -551,10 +551,10 @@ bool    pfGUIControlMod::MsgReceive( plMessage *msg )
         plPipeline* pipe = rend ? rend->Pipeline() : device->Pipeline();
 
         plProfile_BeginLap(GUITime, this->GetKey()->GetUoid().GetObjectName());
-        ISetUpDynTextMap(pipe);
+        bool setupDone = ISetUpDynTextMap(pipe);
         plProfile_EndLap(GUITime, this->GetKey()->GetUoid().GetObjectName());
 
-        if (rend)
+        if (rend && setupDone)
             plgDispatch::Dispatch()->UnRegisterForExactType(plRenderMsg::Index(), GetKey());
         return true;
     }
@@ -660,7 +660,7 @@ bool    pfGUIControlMod::ISetUpDynTextMap( plPipeline *pipe )
 
     fDynTextMap->SetFont( GetColorScheme()->fFontFace, GetColorScheme()->fFontSize, GetColorScheme()->fFontFlags,
                             HasFlag( kXparentBgnd ) ? false : true );
-    fDynTextMap->SetTextColor( GetColorScheme()->fForeColor, 
+    fDynTextMap->SetTextColor( GetColorScheme()->fForeColor,
                             ( HasFlag( kXparentBgnd ) && GetColorScheme()->fBackColor.a == 0.f ) ? true : false );
 
     // Now we gotta set the texture transform on the layer so our texture comes
@@ -672,10 +672,17 @@ bool    pfGUIControlMod::ISetUpDynTextMap( plPipeline *pipe )
     // Let the derived classes do their things
     IPostSetUpDynTextMap();
 
-    // Do our first update
+    // Do our first update. This must always run, even if the font below isn't ready yet:
+    // it's what lazily allocates the DTM's pixel buffer (via IsValid()), and fDynTextLayer
+    // is already live in the scene's material independent of our setup here, so the pipeline
+    // can try to render this texture on any frame regardless of whether we're "done".
     IUpdate();
 
-    return true;
+    // The font cache resolves fonts asynchronously (same as fDynTextLayer/fInitialBounds above),
+    // so on a slow system SetFont() above can still be waiting on the font ref. Report "not ready"
+    // so we get retried on the next plRenderMsg once the real font has loaded, instead of
+    // permanently leaving this control with no text.
+    return fDynTextMap->GetCurrFont() != nullptr;
 }
 
 //// Get/SetColorScheme //////////////////////////////////////////////////////

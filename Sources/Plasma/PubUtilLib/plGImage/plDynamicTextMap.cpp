@@ -383,6 +383,9 @@ void    plDynamicTextMap::IClearFromBuffer( uint32_t *clearBuffer )
 
 void    plDynamicTextMap::IPropagateFlags()
 {
+    if (!fCurrFont)
+        return;
+
     SetJustify(fJustify);
     fCurrFont->SetRenderFlag(plFont::kRenderShadow, fFontFlags & kFontShadowed);
     fCurrFont->SetRenderFlag(plFont::kRenderIntoAlpha, fFontBlockRGB);
@@ -413,7 +416,10 @@ void    plDynamicTextMap::SetJustify( Justify j )
 //  if( !IIsValid() )
 //      return;
 
-    fJustify = j; 
+    fJustify = j;
+    if (!fCurrFont)
+        return;
+
     switch( fJustify )
     {
         case kLeftJustify:  fCurrFont->SetRenderXJustify( plFont::kRenderJustXForceLeft ); break;
@@ -469,6 +475,9 @@ void    plDynamicTextMap::SetLineSpacing( int16_t spacing )
 //      return;
 
     fLineSpacing = spacing;
+    if (!fCurrFont)
+        return;
+
     fCurrFont->SetRenderLineSpacing(spacing);
 }
 
@@ -491,7 +500,7 @@ void    plDynamicTextMap::SetTextColor( hsColorRGBA &color, bool blockRGB )
 
 void    plDynamicTextMap::DrawString( uint16_t x, uint16_t y, const wchar_t *text )
 {
-    if( !IIsValid() )
+    if( !IIsValid() || !fCurrFont )
         return;
 
     IPropagateFlags();
@@ -510,7 +519,7 @@ void    plDynamicTextMap::DrawClippedString( int16_t x, int16_t y, const ST::str
 
 void    plDynamicTextMap::DrawClippedString( int16_t x, int16_t y, const wchar_t *text, uint16_t width, uint16_t height )
 {
-    if( !IIsValid() )
+    if( !IIsValid() || !fCurrFont )
         return;
 
     IPropagateFlags();
@@ -528,7 +537,7 @@ void    plDynamicTextMap::DrawClippedString( int16_t x, int16_t y, const ST::str
 
 void    plDynamicTextMap::DrawClippedString( int16_t x, int16_t y, const wchar_t *text, uint16_t clipX, uint16_t clipY, uint16_t width, uint16_t height )
 {
-    if( !IIsValid() )
+    if( !IIsValid() || !fCurrFont )
         return;
 
     IPropagateFlags();
@@ -546,8 +555,14 @@ void    plDynamicTextMap::DrawWrappedString( uint16_t x, uint16_t y, const ST::s
 
 void    plDynamicTextMap::DrawWrappedString( uint16_t x, uint16_t y, const wchar_t *text, uint16_t width, uint16_t height, uint16_t *lastX, uint16_t *lastY )
 {
-    if( !IIsValid() )
+    if( !IIsValid() || !fCurrFont )
+    {
+        if (lastX != nullptr)
+            *lastX = 0;
+        if (lastY != nullptr)
+            *lastY = 0;
         return;
+    }
 
     IPropagateFlags();
     fCurrFont->SetRenderWrapping( x, y, width, height );
@@ -569,6 +584,13 @@ uint16_t      plDynamicTextMap::CalcStringWidth( const wchar_t *text, uint16_t *
 //      return 0;
 
     SetJustify( fJustify );
+    if (!fCurrFont)
+    {
+        if (height != nullptr)
+            *height = 0;
+        return 0;
+    }
+
     uint16_t w, h, a, lastX, lastY;
     uint32_t firstClipped;
     fCurrFont->SetRenderFlag( plFont::kRenderClip | plFont::kRenderWrap, false );
@@ -585,6 +607,9 @@ void    plDynamicTextMap::SetFirstLineIndent( int16_t indent )
 // ===> Don't need to validate creation
 //  if( !IIsValid() )
 //      return;
+
+    if (!fCurrFont)
+        return;
 
     fCurrFont->SetRenderFirstLineIndent( indent );
 }
@@ -613,6 +638,23 @@ void    plDynamicTextMap::CalcWrappedStringSize( const wchar_t *text, uint16_t *
 //      return;
 
     SetJustify( fJustify );
+    if (!fCurrFont)
+    {
+        if (width != nullptr)
+            *width = 0;
+        if (height != nullptr)
+            *height = 0;
+        if (firstClippedChar != nullptr)
+            *firstClippedChar = 0;
+        if (maxAscent != nullptr)
+            *maxAscent = 0;
+        if (lastX != nullptr)
+            *lastX = 0;
+        if (lastY != nullptr)
+            *lastY = 0;
+        return;
+    }
+
     uint16_t w, h, a, lX, lY;
     uint32_t firstClipped;
     fCurrFont->SetRenderWrapping( 0, 0, *width, *height );
