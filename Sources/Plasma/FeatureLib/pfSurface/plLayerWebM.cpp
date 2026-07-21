@@ -69,7 +69,10 @@ You can contact Cyan Worlds, Inc. by email legal@cyan.com
 #include "hsResMgr.h"
 #include "hsTimer.h"
 
+#include "hsCpuID.h"
+
 #include "plLayerWebM_AVX2.h"
+#include "plLayerWebM_SSE2.h"
 
 #include "plAudio/plAudioSystem.h"
 #include "plGImage/plMipmap.h"
@@ -116,30 +119,51 @@ namespace
     constexpr int32_t BG = UG * 128 + VG * 128;
     constexpr int32_t BR = UR * 128 + VR * 128;
 
-    // Same I420->RGBA math as plPlanarImage::Yuv420ToRgba(), vectorized for the
-    // 8-wide inner loop via plLayerWebM_Yuv420ToRgbaRow8Wide() (see
-    // plLayerWebM_AVX2.cpp -- split into its own file/compile flags, since
-    // GCC/Clang need the whole translation unit built with -mavx2 to use AVX2
-    // intrinsics at all, unlike MSVC). The original was a fully scalar per-pixel
-    // loop, which became a measurable per-frame CPU cost (visible as stutter
-    // while a movie is onscreen) once WebM added continuous, possibly 720p/30fps
-    // decoding on top of what used to be occasional short AVI intro playback.
+    // Same I420->RGBA math as plPlanarImage::Yuv420ToRgba(), vectorized via
+    // plLayerWebM_Yuv420ToRgbaRow8Wide()/Row4Wide() (plLayerWebM_AVX2.cpp/
+    // plLayerWebM_SSE2.cpp -- split into their own files/compile flags, since
+    // GCC/Clang need the whole translation unit built with -mavx2/-msse2 to
+    // use those intrinsics at all, unlike MSVC). The original was a fully
+    // scalar per-pixel loop, which became a measurable per-frame CPU cost
+    // (visible as stutter while a movie is onscreen) once WebM added
+    // continuous, possibly 720p/30fps decoding on top of what used to be
+    // occasional short AVI intro playback.
+    //
+    // HAVE_AVX2 only means the compiler *can* target AVX2 -- it says nothing
+    // about whether the CPU actually running this build has it, and this
+    // isn't ODR-guarded like a compiler intrinsic would be: calling the AVX2
+    // path unconditionally crashed a player on an AVX2-less CPU (illegal
+    // instruction). hsCpuId does a real CPUID check at runtime, once, and is
+    // cached after that first call. SSE2 needs no such check -- it's part of
+    // the mandatory x86-64 baseline, so every 64-bit-capable CPU has it.
     void Yuv420ToRgba(uint32_t w, uint32_t h, const int32_t* stride, uint8_t** planes, uint8_t* const dest)
     {
         const uint8_t* y_src = planes[0];
         const uint8_t* u_src = planes[1];
         const uint8_t* v_src = planes[2];
 
+#ifdef HAVE_AVX2
+        const bool useAVX2 = hsCpuId::Instance().has_avx2;
+#endif
+
         for (uint32_t i = 0; i < h; ++i)
         {
             uint32_t j = 0;
-#ifdef HAVE_AVX2
+#if defined(HAVE_AVX2) || defined(HAVE_SSE2)
             const uint8_t* yRow = y_src + (size_t)stride[0] * i;
             const uint8_t* uRow = u_src + (size_t)stride[1] * (i / 2);
             const uint8_t* vRow = v_src + (size_t)stride[2] * (i / 2);
             uint8_t* destRow = dest + (size_t)w * i * 4;
-            for (; j + 8 <= w; j += 8)
-                plLayerWebM_Yuv420ToRgbaRow8Wide(yRow, uRow, vRow, destRow, j);
+#endif
+#ifdef HAVE_AVX2
+            if (useAVX2) {
+                for (; j + 8 <= w; j += 8)
+                    plLayerWebM_Yuv420ToRgbaRow8Wide(yRow, uRow, vRow, destRow, j);
+            }
+#endif
+#ifdef HAVE_SSE2
+            for (; j + 4 <= w; j += 4)
+                plLayerWebM_Yuv420ToRgbaRow4Wide(yRow, uRow, vRow, destRow, j);
 #endif
             for (; j < w; ++j)
             {

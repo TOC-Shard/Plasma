@@ -18,6 +18,7 @@ set(pfSurface_HEADERS
     plLayerMovie.h
     plLayerWebM.h
     plLayerWebM_AVX2.h
+    plLayerWebM_SSE2.h
 )
 
 plasma_library(pfSurface
@@ -26,9 +27,15 @@ plasma_library(pfSurface
     UNITY_BUILD
     PRECOMPILED_HEADERS Pch.h
 )
-# GCC/Clang (unlike MSVC) need the whole translation unit compiled with -mavx2
-# before AVX2 intrinsics can be used at all -- see plLayerWebM_AVX2.h's comment.
-plasma_target_simd_sources(pfSurface AVX2 plLayerWebM_AVX2.cpp)
+# GCC/Clang (unlike MSVC) need the whole translation unit compiled with
+# -mavx2/-msse2 before those intrinsics can be used at all -- see
+# plLayerWebM_AVX2.h/plLayerWebM_SSE2.h's comments. SSE2 is the mandatory
+# runtime-safe fallback for CPUs without AVX2 (see plLayerWebM.cpp's
+# Yuv420ToRgba(), which picks between them via a real CPUID check).
+plasma_target_simd_sources(pfSurface
+    AVX2 plLayerWebM_AVX2.cpp
+    SSE2 plLayerWebM_SSE2.cpp
+)
 target_link_libraries(
     pfSurface
     PUBLIC
